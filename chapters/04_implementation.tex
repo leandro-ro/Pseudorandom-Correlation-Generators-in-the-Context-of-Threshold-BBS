@@ -1,0 +1,105 @@
+\chapter{Implementation}
+\label{chapter:ImplementingPCGs}
+In this chapter, we describe the implementation of the PCG constructions introduced in Section \ref{sec:construction}. We outline our approach to the necessary building blocks and show practical considerations for implementing these primitives in the context of the PCG construction. We also analyze the complexity of each building block. The implementation of all the building blocks, as well as the PCG for OLE/VOLE correlations, is available on GitHub\footnote{\url{https://github.com/leandro-ro/Threshold-BBS-Plus-PCG}} and is provided in \textit{Golang} using multithreading via \textit{go routines}. To perform operations within the finite field $\mathbb{Z}_p$, we use a high-speed BLS12-381 library\footnote{\url{https://github.com/kilic/bls12-381}}, which implies setting $p$ as the group order of this curve. For benchmarks and a detailed evaluation of our implementation, we refer the reader to Chapter X.
+
+\section{Distributed Sum of Point Functions}
+Let's revisit point functions from Section \ref{prelim:FSS}.  A point function $f_{a,b}$ focuses on a single position $a$ within its domain $[N]$. It assigns a non-zero value $b$ to that special position $a$, and $0$ to all other positions in the domain. Distributed Point Functions (DPFs) enable secret sharing this type of function. Our PCG construction requires an extension of DPFs, that support multiple special positions. We call this a Distributed Sum of Point Functions (DSPF – see Definition \ref{def:dspf}). A DSPF realizes a secret sharing of an injective function that maps $t$ special positions to $t$ non-zero values. In practice, we construct a DSPF by using $t$ individual DPFs. This abstraction makes implementation straightforward and allows for efficient multithreading.
+
+\subsection{Tree-Based Distributed Point Function}
+We adopt a tree-based approach for realizing DPFs, originally introduced by Boyle et al. in \cite{boyle2015function} and subsequently refined in \cite{boyle2016function}. At its core, the seed generation algorithm, \texttt{DPF.Gen}$(1^\lambda, a, b)$ outputs two seeds $(s_0, s_1)$, one for each party. Each seed encodes a binary tree of depth $n$, encompassing a domain of size $N=2^n$ for the point function. These trees are identical except along the path determined by the binary representation of the special point $a$. Construction of these trees involves \texttt{DPF.Gen} selecting a random root value for each party. Node values are computed in a deterministic fashion using a pseudo-random generator (PRG) seeded with the value of the parent node. Along the path corresponding to $a$, correction words are strategically applied based on the $i$th bit of $a$. These correction words guarantee that:
+\begin{itemize}
+\item Nodes outside the path designated by $a$ remain identical in both trees. 
+\item Nodes along the path diverge between the trees.
+\item The leaf node to which $a$ points holds a value that, when added to its counterpart in the other tree, yields the non-zero output b.
+\end{itemize}
+The correction terms form part of the seed, resulting in a seed of size $n(\lambda+2)$ bits each. To evaluate the function, participants call \texttt{DPF.Eval}$(\sigma, s_\sigma, x) \rightarrow y$ to navigate their tree based on the binary representation of an input $x$. Using the PRG and integrating correction terms where necessary, each participant calculates its portion. When $x=a$, the participant acquires a leaf node containing an additive share of the non-zero value $b$. If $x\neq a$, the cumulative additive shares amount to zero, disclosing no information about the non-zero element other than the fact that $x$ is not the special position of the underlying point function.
+
+\subsection{Constructing DSPFs}
+\label{subseq:constructingTBDSPFs}
+DSPFs can be constructed directly from tree-based DPFs. In the seed generation, \texttt{DSPF.Gen($1^\lambda, \boldsymbol{\alpha}, \boldsymbol{\beta}$)} invokes the DPF seed generator \texttt{DPF.Gen}$(1^\lambda, a, b)$ for each position $a \in \boldsymbol{\alpha}$ and corresponding non-zero element $b \in \boldsymbol{\beta}$. The resulting DPF seeds form the DSPF seeds. For evaluation, \texttt{DSPF.Eval($\sigma, \boldsymbol{s}_\sigma, x$)}  performs \texttt{DPF.Eval}$(\sigma, s_\sigma, x)$ on each seed $s_\sigma\in\boldsymbol{s}_\sigma$, yielding a result vector $\boldsymbol{r}_\sigma$ containing all DPF evaluations. Combining both parties' results gives $\boldsymbol{r} = \boldsymbol{r}_0 + \boldsymbol{r}_1$. If $x\in\boldsymbol{\alpha}$ the Euclidean norm\footnote{The Euclidean norm of \(\mathbf{x} = (x_1, x_2, ..., x_n)\): \(\|\mathbf{x}\|_2 = \sqrt{x_1^2 + x_2^2 + ... + x_n^2}\).}  is $||\boldsymbol{r}||_2=b$ (the corresponding non-zero element).  Otherwise, $\boldsymbol{r}$ contains only zeros and $||\boldsymbol{r}||_2=0$.
+\\\\
+We can analogously construct \texttt{DSPF.FullEval}$(\sigma, \boldsymbol{s}_\sigma)$ by invoking \texttt{DPF.FullEval}$(\sigma, s_\sigma)$ on each DPF seed $s_\sigma\in\boldsymbol{s}_\sigma$. This yields a $(t\times N)$-matrix $\boldsymbol{R}_\sigma$, where each row represent the full domain evaluation of the corresponding underlying DPF. Combining results from both parties produces a sparse matrix $\boldsymbol{R} = \boldsymbol{R}_0 + \boldsymbol{R}_1$ with $t$ non-zero elements (one per row).  Multiplying $\boldsymbol{R}$ by an $N$-vector of ones gives us the full domain evaluation i.e. all non-zero elements $\boldsymbol{\beta}$.
+
+\begin{equation}
+\begin{aligned}
+\boldsymbol{R} &= \boldsymbol{R}_0 + \boldsymbol{R}_1 = \begin{bmatrix} r_{11} & \cdots & r_{1N} \\ \vdots & \ddots & \vdots \\ r_{t1} & \cdots & r_{tN} \end{bmatrix}, \:\:\:\:\:\:  \boldsymbol{R} \cdot \begin{bmatrix} 1 \\ \vdots \\ 1 \end{bmatrix} = \boldsymbol{\beta}
+\end{aligned}
+\end{equation}
+
+\subsubsection{Optimizing Space-Complexity}
+Implementing the DSPF described above naively poses a space complexity bottleneck for large domains. Consider  $N=2^{20}$, $t=16$, and 128-bit elements: each party's matrix $\boldsymbol{R}_\sigma$ requires 268MB of memory. This becomes impractical for PCG constructions with numerous DSPF instances.  Temporary moving to storage is also infeasible due to latency. A more efficient approach compresses elements on creation, such that we omit storing the full matrix $\boldsymbol{R}_\sigma$. Instead, we directly sum elements within each row. Due to the distributivity of vector/matrix operations, summing these vectors still yields $\boldsymbol{\beta}$:
+
+\begin{equation}
+\begin{aligned}
+\label{eq:optimizedSpaceCompexity}
+\boldsymbol{\beta} &= \boldsymbol{R} \cdot \begin{bmatrix} 1 \\ \vdots \\ 1 \end{bmatrix} = (\boldsymbol{R}_0 + \boldsymbol{R}_1 ) \cdot\begin{bmatrix} 1 \\ \vdots \\ 1 \end{bmatrix} = \boldsymbol{R}_0 \cdot\begin{bmatrix} 1 \\ \vdots \\ 1 \end{bmatrix} + \boldsymbol{R}_1 \cdot\begin{bmatrix} 1 \\ \vdots \\ 1 \end{bmatrix} 
+\end{aligned}
+\end{equation}
+
+\subsubsection{Parallelization}
+The DSPF construction is suitable for parallelization by executing each underlying DPF in a separate thread. It's important to note that parallelizing \texttt{DSPF.Gen} and \texttt{DSPF.Eval}  likely introduces overhead that outweighs any gains due to their relatively short execution times. However, the computational complexity of the full domain evaluation \texttt{DSPF.FullEval} justifies its parallelization across separate threads. To achieve optimal performance regardless of the available threads, our implementation employs a worker pool. A worker pool is a software design pattern where a fixed number of threads ("workers") are created to handle tasks from a queue. This optimizes resource usage and avoids the overhead of constantly creating and destroying threads. If \texttt{DSPF.FullEval} is called, the underlying \texttt{DPF.FullEval} tasks are placed in the queue and concurrently processed by the workers. We evaluate this in Section X.
+
+\subsubsection{Efficient full domain evaluation}
+In PCG constructions for OLE and VOLE, the \texttt{PCG.Expand} function (Algorithms \ref{algo:PCG_Expand_OLE} and \ref{algo:PCG_Expand_VOLE}) necessitates multiple full domain evaluations of DSPFs in step 3. Recall that a full domain evaluation entails evaluating the DSPF for all positions $x \in [N]$ for its domain $N$, which requires $t$ full domain evaluations of the underlying DPFs. Hence, optimizing this operation has a noticeable impact on the overall runtime. 
+\\\\
+A naive implementation of the tree-based DPF would involve $2^n\cdot n$ PRG evaluations for $n$ being the depth of the binary tree and domain $N = 2^n$, leading to undesirable exponential complexity. However, the tree structure allows for an efficient optimization strategy by caching previously computed nodes. This approach reduces the complexity of a full domain evaluation to only $2^{n+1}-1$ PRG invocations, achieving a favorable complexity of $O(N)$.
+
+\section{Polynomial operations}
+Efficient polynomial manipulation is important for optimizing the performance of our constructions. Scaling to large domains ($N$) is particularly interesting, as it increases the number of OLE/VOLE correlations which speeds up setup cost amortization. In practice, $N$ can reach millions, requiring our implementation to handle polynomials of extremely high degrees. Two key operations must be optimized: \textit{polynomial multiplication}, used extensively in steps 4 and 5 of PCG expansion, and \textit{polynomial evaluation}, necessary for extracting OLE/VOLE correlations. We opted for a custom implementation for the following reasons.
+\begin{itemize}
+\item \textbf{High-Degree Polynomial Support}: Existing libraries often lack support for the extremely high degrees required by our use case.
+\item \textbf{Finite Field Exponents:} Our implementation necessitates exponents residing within a finite field of a large prime, a feature not commonly available in standard libraries.
+\item \textbf{Data Structure Optimization:} A custom implementation allows us to tailor the underlying data structures for maximum efficiency in our specific application.
+\end{itemize}
+
+\subsection{Multiplication via FFT}
+The Fast Fourier Transform (FFT), originally proposed by Cooley et al. in \cite{cooley1965algorithm}, is a divide-and-conquer algorithm that efficiently evaluates degree-$n$ polynomials in the complex numbers given the $n$th root of unity in that space. The algorithm achieves a computational complexity of $O(n\log n)$, given that $n$ is a power of 2 or, more generally, an integer of smooth order (composed of small prime factors). Pollard extended FFT's applicability to finite fields in \cite{pollard1971fast}, which we adopt for our implementation. 
+\\\\
+We operate within the finite field defined by the group order of the BLS12-381 curve (a 381-bit prime). To enhance performance, we've precomputed matching roots of unity for various powers of 2, specifically $n=2^i$ with $i \in \{8, 9, ..., 21\}$. This allows us to efficiently multiply polynomials with a maximum degree of $(n/2)-1$ each. A crucial aspect of our implementation is strategically selecting the most suitable precomputed root of unity. Once a root of unity is chosen, the FFT's computational complexity of $O(n \log n)$ is fixed. This complexity remains independent of the actual polynomial degree, provided it does not exceed the limit determined by the selected root. This strategic selection optimizes computational efficiency within the defined constraints. We give benchmarks for our implementation in Section X.
+
+\subsection{Evaluation via Horners Method}
+\label{subsec:horner}
+To extract all OLE/VOLE correlations from the polynomial pair generated by \texttt{PCG.Expand}, each party must evaluate its pair on all $N$ roots of unity. Imagine we have a dense degree-$n$ polynomial $P(X)$ in standard form:
+$$
+P(x) = a_n x^n + a_{n-1} x^{n-1} + \dots + a_1 x + a_0
+$$
+To evaluate the polynomial at a specific value $x$, a naive approach would involve iterating through each term, computing its correspoding power of $x$, and multiplying it by the coefficient. Summing these products would provide the final result. The number of multiplications required scales quadratically with the number of terms. Utilizing this naive approach for our construction would make this a bottleneck as each party performs $2N$ evaluations of degree-$N$ dense polynomials for extracting $N$ OLE/VOLE correlations. Especially for large $N$s this would become infeasible.
+
+\subsubsection{Horner's Method}
+Horner's method offers a more efficient way to evaluate polynomials \cite{horner1819xxi}. Instead of directly computing each term's power of $x$, it rewrites the polynomial using a nested structure. This restructuring leverages the fact that many terms share a common factor of $x$. Let's see this transformation step-by-step: We start with the highest degree terms and factor out $x$ from these.
+$$
+P(x) = a_n x^n + a_{n-1} x^{n-1} + ... = x(a_n x^{n-1} + a_{n-1} x^{n-2}) + ...
+$$
+We repeat this to again and nest the result.
+$$
+P(x) = x(x(a_n x^{n-2} + a_{n-1} x^{n-3}) + a_{n-2}x^{n-3}) + ...
+$$
+Repeat this nesting process for all terms to obtain the reformulated polynomial using Horner's method. This polynomial representation then allows us to avoid repeated calculations of powers of $x$. By factoring out $x$, our implementation reuses computations rather than recalculating the same powers multiple times. This reduces the number of multiplications from $O(n^2)$ to $O(n)$, which significantly improves performance, especially for the high-degree polynomials for which we want to optimize our implementation. Further, we speed up polynomial evaluation by parallelizing Horner's Method. The polynomial is divided into chunks, each of which is evaluated concurrently by a separate thread. The threads share a precomputed set of powers of $x$. We present a detailed performance analysis of this in Section X.
+
+\subsection{Exploiting sparsity}
+Notably, in many cases the polynomials used in our construction are sparse polynomials of high degree. A sparse polynomial contains only a small number of monomials with non-zero coefficients (e.g., $x^n + 7x^4$ is a $2$-sparse polynomial of degree $n$). We exploit this sparsity in multiple ways. First, we represent sparse polynomials using map-like data structures where keys represent exponents and values store the corresponding coefficients, improving space complexity by eliminating the need to allocate space for monomials with zero coefficients. Second, the map representation enables faster execution of several polynomial operations, especially multiplication. While the Fast Fourier Transform (FFT) offers theoretically optimal complexity for polynomial multiplication in $O(n \log n)$, this advantage depends on the density of the polynomials. Our implementation chooses between naive multiplication and FFT for sparse polynomials, dynamically applying naive multiplication over our map representation if $n\log n > t_0 \cdot t_1$ (where $t_0$ and $t_1$ are the number of non-zero terms in each polynomial) and using FFT otherwise. This tailored approach optimizes our implementation for the specific characteristics of the polynomials we encounter. 
+
+\section{Considerations for F(X) in BLS12-381}
+As described in Section X, the \textit{roots of unity} of the cyclotomic polynomial $F(X)$ play a critical role within the PCG construction for splitting the single (V)OLE correlation in a ring to $N$ separate (V)OLE correlations in a finite field. Our implementation utilizes the finite field $\mathbb{Z}_p$, defined by the group order of the BLS12-381 elliptic curve. This group order $p$ is a 381-bit prime. For efficiently performing arithmetic operations within this field, we utilize a high-speed BLS12-381 library\footnote{\url{https://github.com/kilic/bls12-381}}.
+
+\subsubsection{Smooth order and primitive root of unity}
+The \textit{smooth order} of the BLS12-381 group order $p$ is the product of distinct prime factors of $p-1$ under a certain threshold. While we could employ factorization algorithms, such as \textit{Pollard's p-1 algorithm} \cite{pollard1974theorems}, to calculate the smooth order in code, we opt for hard coding the factors to improve performance within our BLS12-381-specific implementation. We report the factorization in Figure \ref{fig:pminus1factorization}.
+
+\begin{figure}[htbp]
+\centering
+\setlength{\fboxsep}{10pt}
+\fbox{
+\ensuremath{
+p - 1 = 2^{32} \cdot 3 \cdot 11 \cdot 19 \cdot 10177 \cdot 125527 \cdot 859267 \cdot 906349^{2} \cdot 2508409 \cdot 2529403 \cdot 52437899 \cdot 254760293^{2}
+}}
+\caption{Factorization of \(p-1\) for BLS12-381 group order $p$}
+\label{fig:pminus1factorization}
+\end{figure}
+
+Furthermore, we find the \textit{primitive root of unity} for BLS12-381 to be $\omega = 7$. This parameter fulfills Fermat's Little Theorem (Equation \ref{eq:fermatLT}) for group order $p$.
+
+\subsubsection{Generating roots of unity}
+We implement Equation \ref{eq:root_main_equasion} with the abovementioned parameters. Notice that when all parameters are (pre-)computed such that the multiplicative group generator $g$ (Equation \ref{eq:multGroupGen}) is available, the generation of all $N$ roots of unity is as simple as iterating with $j\in[2N]$ over $g^i$ for $i=2j+1$. Although low in complexity, performing this iteration for large $N$ might lead to high runtimes when computing all roots of unity at once. We can optimize this using Horner's idea for efficient polynomial evaluation (cf. Section \ref{subsec:horner}), which caches the exponentiation of $x$ in order to calculate the next higher exponentiation(s) efficiently. This idea can similarly be applied here, such that $g^{i-2}$ is re-used to compute the next root $g^i= g^{i-2}\cdot g^2$ through only one additional multiplication. We evaluate this optimization for large $N$ in Section X.
+
+\subsubsection{Further practical considerations}
+Ultimately, we make the following practical observations: Once roots are calculated for a specific $p$ and $N$, they can be stored and re-used. Therefore, it is sufficient to calculate the corresponding roots of unity once for multiple (V)OLE PCG instances with the same domain $N$ that are employed in parallel. This also applies to the sequential case. Although our implementation does not cover this, parties could alternatively compute a specific $i$th root on demand if storage complexity is a significant concern. To optimize this approach further, parties could store only the current computed root of unity ($g^i$) and generate the next root ($g^{i+2}$) on-demand by only performing one multiplication $g^i\cdot g^2$. This strategy limits storage complexity to one element in $\mathbb{Z}_p$ ($381$ bit in case of BLS12-381) while minimizing computational effort. 

@@ -1,0 +1,96 @@
+\documentclass{cacthesis}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{pifont}% http://ctan.org/pkg/pifont
+\usepackage{amssymb}% http://ctan.org/pkg/amssymb
+\usepackage{mdframed}
+\usepackage{dsfont}
+\usepackage{amsthm}
+\usepackage{bm}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{bbm}
+\usepackage{hyperref}
+\usepackage{amsmath,amssymb}
+\usepackage{subcaption} % For subfigures with their own captions
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{construction}{Construction}
+
+\newenvironment{specialconstruction}[1]
+  {% Before code
+   \refstepcounter{construction}% Increment the construction counter
+   \begin{mdframed}
+   \noindent\textbf{Construction \theconstruction: #1}\par
+  }
+  {% After code
+   \end{mdframed}
+  }
+
+
+\newcommand{\cmark}{\ding{51}}%
+\newcommand{\xmark}{\ding{55}}%
+
+\newcounter{protocol}
+\newenvironment{protocol}[1]
+  {\par\addvspace{\topsep}
+   \noindent
+   \tabularx{\linewidth}{@{} X @{}}
+    \hline
+    \refstepcounter{protocol}\textbf{Protocol \theprotocol} #1 \\
+    \hline}
+  { \\
+    \hline
+   \endtabularx
+   \par\addvspace{\topsep}}
+
+\newcommand{\sbline}{\\[.5\normalbaselineskip]}% small blank line
+\newtheorem{definition}{Definition}
+
+\begin{document}
+
+	\frontmatter
+	
+	%%%%%%%%%%%%%
+	%% Title page
+	%%%%%%%%%%%%%
+	\title{Implementation and Evaluation of Pseudorandom Correlation Generators in the Context of Threshold BBS+}
+	\author{Leandro Rometsch}
+	\date{April 08, 2024}
+	\subject{Master Thesis}
+	
+	\publishers{
+		\small
+		\begin{tabular}{r l}
+			Supervisors: &  Prof. Sebastian Faust, Ph.D. & & David Kretzler & & Benjamin Schlosser
+		\end{tabular}
+	}
+	\maketitle
+        \include{chapters/00_abstract}
+        
+	\tableofcontents
+	    
+	\mainmatter
+	
+        \include{chapters/01_introduction}
+
+        \include{chapters/02_preliminaries}
+
+        \include{chapters/03_pcg}
+                
+        \include{chapters/04_implementation}
+
+        \include{chapters/05_evaluation}
+
+        \include{chapters/06_bbsplus}
+        
+        \include{chapters/07_conclusion}
+        
+	\newpage
+    \bibliographystyle{unsrt}
+    \bibliography{ref}
+	
+	\appendix
+\end{document}

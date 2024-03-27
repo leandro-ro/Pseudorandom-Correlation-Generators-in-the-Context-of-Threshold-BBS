@@ -1,0 +1,227 @@
+\chapter{Preliminaries}
+\section{LPN-based cryptography}
+The Learning Parity with Noise (LPN) problem has emerged as a popular hardness assumption in several disciplines, including cryptography, machine learning, and coding theory. The basic concept of LPN is the difficulty of solving linear equations when they are contaminated with noise. This noise significantly increases the complexity of deriving accurate solutions, embodying the hardness of the assumption, which can be related to the NP-complete problem of \textit{decoding random linear codes} \cite{yu2016pseudorandom}. In the context of cryptography, the LPN assumption has found increasing application, particularly in the design of lightweight encryption and authentication schemes \cite{pietrzak2012cryptography}. Many of these applications are provably secure, meaning that any effective attack on such schemes would require overcoming the underlying LPN hardness assumption. In addition, LPN is gaining traction in post-quantum cryptography. Unlike other popular assumptions such as prime factorization and the discrete logarithm problem, which are vulnerable to quantum attacks via Shor's algorithm \cite{shor1999polynomial}, the LPN problem has not yet been efficiently solved by quantum algorithms \cite{zhao2018hardness}. 
+In the following, we describe basic LPN and extend this description to LPN over rings with static leakage, which will serve as the main security assumption in this work.
+
+\subsection{Primal- and Dual-LPN}
+Primal Learning Parity with Noise (\texttt{Primal-LPN}) represents the foundational version of the LPN problem, offering adversaries black-box access to two oracles. The first oracle, containing a secret vector \( \mathbf{s} \in \mathbb{F}_2^{n} \), generates an error vector \( \mathbf{e} \in \mathbb{F}_2^{n} \) with each element independently derived from a Bernoulli distribution of probability \( \tau \). It then outputs a pair: a uniformly random matrix \( \mathbf{A} \in \mathbb{F}_2^{n\times n} \) and a vector \( \mathbf{t} = \mathbf{A}\mathbf{s} + \mathbf{e} \in \mathbb{F}_2^{n} \). The second oracle provides a uniformly random matrix \( \mathbf{A} \) and vector \( \mathbf{t} \), both in \( \mathbb{F}_2^{n\times n} \) and \( \mathbb{F}_2^{n} \) respectively, without the underlying \( \mathbf{s} \) and \( \mathbf{e} \) relationship. The adversary's task (in this decisional formulation of \texttt{Primal-LPN}) is to distinguish between pairs \((\mathbf{A}, \mathbf{t})\) that adhere to the linear equation \(\mathbf{t} = \mathbf{A}\mathbf{s} + \mathbf{e}\) and randomly generated pairs, which is computationally hard due to the obfuscating effect of the noise vector \( \mathbf{e} \) \cite{zhao2018hardness}. Notably, the problem description via Bernoulli implies that the problem remains hard for sparse noise vectors (i.e., containing a fixed number of zero elements) as proven by Liu et al. in \cite{liu2017hardness}. Notably, the \texttt{Primal-LPN} is equivalent to the \texttt{Dual-LPN} assumption \cite{couteau2021silver}, which provides a simplified representation of the LPN challenge. In this formulation, the secret is embedded within the linear transformation itself. The adversary now only needs to distinguish between a random matrix $H \in \mathbb{Z}_p^{m \times n}$ and the product $H \cdot \mathbf{e}$ for a noise vector $\mathbf{e}\in \mathbb{Z}_n^{m \times n}$.
+
+\subsection{Ring-LPN}
+\label{prelim:ring_lpn}
+Ring Learning Parity with Noise (\texttt{Ring-LPN}) is an extension of the LPN problem to rings and was first introduced by Heysen et al. (although over $\mathbb{Z}_2$). Instead of dealing with vectors over a binary field, \texttt{Ring-LPN} operates over a polynomial ring, typically denoted $ R =\mathbb{Z}_p[X]/F(X)$ for a prime $p$ and degree-$N$ monic polynomialc\footnote{A monic polynomial is one where the leading coefficient, the coefficient of the highest degree term, is 1.} $F(X)\in \mathbb{Z}_q[X] $. The error $e(X)$ is sampled from a uniform distribution $\mathcal{H W}_{t}^{R}$ as a $t$-sparse polynomial over $R$ by sampling $t$ noise positions $\mathbf{p} \leftarrow [N]^t$ and payloads $\mathbf{b} \leftarrow [\mathbb{Z}_p]^t$ uniformly for outputting ring element $e(X) = \sum_{j=0}^{t-1} b[j] \cdot X^{p[j]}$. 
+
+\subsubsection{Generalizing Ring-LPN}
+As described by Boyle et al. in \cite{boyle2020efficient} \texttt{Ring-LPN} can be further generalized to $R^{c}$-LPN$_{t}$ (also called \texttt{Module-LPN}) by replacing $a^{(i)} \cdot e$ with the inner product $\left\langle\vec{a}^{(i)}, \vec{e}\right\rangle$ between length-$(c-1)$ vectors over $R$, for some constant $c \geq 2$. In this context, the adversary gains access to a leakage that allows him to guess any error coordinate as long as the guess is correct. Modeling this leakage is necessary because it allows for some flexibility in the PCG construction. For a more formal definition of $R^{c}$-LPN$_{t}$ \textit{with} \textit{static leakage}, we recall the security game of \cite{abram2022low} in Figure \ref{fig:module-lpn-game}. The $R^{c}$-LPN$_{t}$ problem \textit{with static leakage} is hard if for every probabilistic polynomial-time adversary $\mathcal{A}$ it holds that
+
+$$
+\left|\texttt{Pr}\left(\mathcal{G}_{R, t, c,\mathcal{A}}^{\text{Module-LPN}}(\lambda) = 1\right) - \frac{1}{2}\right|\leq \texttt{negl}(\lambda) .
+$$
+\\
+In particular, \cite{boyle2020efficient} reports that the hardness of $R^{c}$-LPN$_{t}$ depends entirely on ($c,t$) when a cyclotomic polynomial $F(X)$ is chosen for $R$ due to a dimension reduction attack that renders $N$ (from which the noise positions are sampled in $\mathcal{H W}_{t}^{R}$) irrelevant. The authors further report $(c,t) \in \{(4,16),(8,5),(2,76)\}$ to achieve 128-bit security.
+
+\begin{figure}[t]
+    \begin{mdframed}[nobreak=true]
+        \begin{center}
+            \textbf{Security Game:} $\mathcal{G}_{R, t, c,\mathcal{A}}^{\text{Module-LPN}}(\lambda)$\\
+        \end{center}
+
+        \textbf{Initialisation:}
+        \begin{itemize}
+            \item The challenger initialises the adversary $\mathcal{A}$ with security parameter $\mathds{1}^{\lambda}$ 
+            \item The challenger samples a random bit b $\stackrel{\$}{\leftarrow} \{0,1\}$ and $c$ ring elements $e_{0}, e_{1}, \ldots, e_{c-1} \stackrel{\$}{\leftarrow} \mathcal{H} \mathcal{W}_{t}^{R}$, with the $j$-th noise position of $e_i$ being denoted by $p_{i}[j]$.
+        \end{itemize}
+        
+        \textbf{Query Phase:}
+        \begin{itemize}
+            \item The adversary $\mathcal{A}$ may adaptively issue queries $(i, j, I)$, where $i \in [c]$, $j \in [t]$, and $I \subseteq [N]$.
+            \item If $p_{i}[j] \in I$, the challenger responds with "Success" and waits for the next query ; otherwise, it sends "Abort" and enters the next phase.
+        \end{itemize}
+
+        \textbf{Challenge Phase:}
+        \begin{itemize}
+            \item For each $i \in [c-1]$, the challenger samples $a_{i}$ uniformly from $R$ and fixes $a_{c-1} = 1$.
+            \item It computes the challenge response (inner product) $u_{1}$ as follows:
+            $$
+            u_{1} \leftarrow \sum_{i=0}^{c-1} a_{i} \cdot e_{i} = \sum_{i=0}^{c-2} a_{i} \cdot e_{i} + e_{c-1}
+            $$
+            \item An independent sample $u_{0}$ is drawn uniformly from $R$.
+            \item The challenger presents $\mathcal{A}$ with the tuple $\left(a_{0}, a_{1}, \ldots, a_{c-2}, u_{b}\right)$.
+        \end{itemize}
+
+        \textbf{Response:}
+        \begin{itemize}
+            \item The adversary $\mathcal{A}$ submits a guess $b'$.
+            \item The game outputs $1$ (indicating success) if $b = b'$, and $0$ otherwise.
+        \end{itemize}
+    \end{mdframed}
+    \caption{The $R^{c}$-LPN$_{t}$ Security Game}
+    \label{fig:module-lpn-game}
+\end{figure}
+
+\section{Threshold Signatures}
+\label{prelim:thresholdSignatures}
+Blakley and Shamir introduced the concept of threshold secret sharing \cite{blakley1979safeguarding}\cite{shamir1979share}, describing a system where a secret \(x\) is distributed into \(n\) parts. In such an \(t\)-out-of-\(n\) scheme, an efficient algorithm can reconstruct the secret \(x\) using any \(t\) of these parts, yet any collection of fewer than \(t\) parts reveals no information about \(x\).
+\\\\
+\textbf{Threshold signature schemes.} Bringing this concept over to signature schemes, Desmedt and Yair later proposed the first thresholdized signature scheme based on RSA \cite{desmedt1991shared}. Analogous to threshold secret sharing, in a $t$-out-of-$n$ threshold signature scheme a collective of any $t$ participants can generate a valid signature on a message that is verifiable using a single, publicly known key. The distribution of secret shares can be facilitated either by a trusted dealer or by a dealer-less setup involving interactive protocols among the participants.
+
+\begin{definition}[\textbf{$t$-out-of-$n$ Threshold Signature Scheme (TSS)}]
+    Let $P_0,...,P_{n-1}$ denote the parties participating and let $t$ be the threshold, such that $t \leq n-1$. We define a $t$-out-of-$n$ TSS as a tuple of algorihtms \texttt{\textup{(TheshKeyGen, TheshSig, CombineSig, Verify)}} such that
+    \begin{itemize}
+        \item \texttt{\textup{TheshKeyGen($1^\lambda$)}} is a probabilistic polynomial-time algorithm that takes a security parameter $\lambda$ to output to each party $P_{i\in [n]}$ the public key $pk$ as well as a private key share $sk_i$.
+        \item \texttt{\textup{TheshSig$_{sk_i}$($m$)}} is a polynomial-time algorithm which takes a secret share $sk_i$ and a message $m$ to output a partial signature $\sigma_i$.
+        \item \texttt{\textup{CombineSig($\sigma_{i \in [n]},...$)}} is a polynomial-time algorithm that aggregates a minimum of $t$ partial signatures $\sigma_{i \in [n]}$ to outputs a single signature $\sigma$.
+        \item \texttt{\textup{Verify$_{pk}(\sigma, m$)}} is a polynomial-time algorithm that takes the public key $pk$, a signature $\sigma$, and a message $m$. It outputs 1 if and only if $\sigma$ is a valid signature of $m$ under the public key $pk$.
+    \end{itemize}
+\end{definition}
+
+The main security attribute of a TSS is \textit{unforgeability}. We consider a TSS unforgeable under the condition that no adversary can, with non-negligible probability, forge a signature on any new, previously unsigned message $m$. This holds even if the adversary has compromised up to $t-1$ parties. The adversary's capabilities include access to the \texttt{\textup{TheshKeyGen}} and \texttt{\textup{TheshSig}} protocols for selecting input messages $m_1,\ldots,m_k$ adaptively and obtaining signatures on these messages which makes this notion analogous to the notion of \textit{existential unforgeability} under chosen message attack for standard signature schemes as defined by Goldwasser et al. in \cite{goldwasser1988digital}. Informally, the security guarantee ensures that adversaries cannot derive secret key shares from observing legitimate signatures. A comprehensive formal definition of a secure TSS is detailed in \cite{gennaro1996theory}.
+
+\section{Pseudorandom Correlation Generators}
+\label{sec:prelim_PCGs}
+A Pseudorandom Correlation Generator (PCG) is a distributed form of a pseudorandom generator that allows participants to generate seeds that can then be locally extended by each party to produce correlated pseudorandom bit streams. Realizing this functionality, we define a PCG as a pair of algorithms (\texttt{PCG.Gen}, \texttt{PCG.Eval}) by using the notion of reverse-sampled correlation generators from \cite{boyle2020efficient} and following the general definition of \cite{abram2022low}.
+
+\begin{definition}[\textbf{Reverse-sampleable Correlation Generator}]
+Let \texttt{\textup{CGen}} be a PPT algorithm that implements an n-party correlation generator that takes the security parameter $1^\lambda$ as input and gives correlated outputs $R_0, R_1,..., R_{n-1}$ for each party respectively. We consider \texttt{\textup{CGen}} to be reverse samplabe if there exists a PPT algorithm \texttt{\textup{RSample}}, s.t. for each set of corrupted parties $\mathcal{C} \subseteq [n]$ the distribution 
+
+$$
+\left\{\begin{array}{l|l}
+\left(R_i^{\prime}\right)_{i \in[n]} & \begin{array}{l}
+\left(R_0, R_1, \ldots, R_{n-1}\right) \stackrel{\$}{\leftarrow} \texttt{\textup{CGen}}\left(1^\lambda\right) \\
+\forall i \in \mathcal{C}: \quad R_i^{\prime} \leftarrow R_i \\
+\left(R_i^{\prime}\right)_{i \in [n]\setminus\mathcal{C}} \stackrel{\$}{\leftarrow} \texttt{\textup{RSample}}\left(1^\lambda, \mathcal{C},\left(R_i^{\prime}\right)_{i \in \mathcal{C}}\right)
+\end{array}
+\end{array}\right\}
+$$
+
+is computationally indistinguishable from $\texttt{C}$.
+\end{definition}
+
+Informally, the reverse-sampleable correlation generator allows to derive remaining correlations given a subset of the output of the correlation generator $\texttt{CGen}$. Since we are using correlations that are reverse-sampleable, this definition suits us to further formalize the PCG.
+
+\begin{definition}[\textbf{Pseudorandom Correlation Generator (PCG)}]
+\label{def:PCGprelim}
+Let \texttt{\textup{CGen}} be a reverse-sampled correlation generator. A pseudorandom corrleation genederator for \texttt{\textup{CGen}} is a pair of algorithms \texttt{\textup{(PCG.Gen, PCG.Expand)}} such that
+    \begin{itemize}
+        \item \texttt{\textup{PCG.Gen($1^\lambda$)}} is a probabilistic polynomial-time (PPT) algorithm that takes a security parameter $\lambda$ to generate a pair of seeds $(k_0, k_1)$.
+        \item \texttt{\textup{PCG.Expand($b, k_p$)}} is a deterministic polynomial-time algorithm that takes a seed $k_p$ for party $p$ and outputs a bit string $R_p \in \{0,1\}^n$.
+    \end{itemize}
+    
+    The scheme must satisfy the following properties:
+    \begin{itemize}
+        \item \textbf{\textup{\textbf{Correctness:}}} The respective outputs of  \texttt{\textup{PCG.Expand}} are correlated such that the following distribution is computationally indistinguishable from \texttt{\textup{CGen($1^\lambda$)}}.
+        
+        $$
+        \left\{\begin{array}{l|l}
+        \left(R_i^{\prime}\right)_{i \in[n]} & \begin{array}{l}
+        \left(\kappa_0, \kappa_1, \ldots, \kappa_{n-1}\right) \stackrel{\$}{\leftarrow} \texttt{\textup{PCG.Gen}}\left(1^\lambda\right) \\
+        \forall i \in[n]: \quad R_i \leftarrow \texttt{\textup{PCG.Expand}}\left(\kappa_i, i\right)
+        \end{array}
+        \end{array}\right\}
+        $$
+        
+        \item \textbf{\textup{\textbf{Security:}}} For every subset of corrupted parties $\mathcal{C} \subseteq [n]$, the following distributions are computationally indistinguishable
+
+        $$
+        \left\{\begin{array}{l|l}
+        (\kappa_i)_{i\in\mathcal{C}} & \begin{array}{l}
+        \left(\kappa_0, \kappa_1, \ldots, \kappa_{n-1}\right) \stackrel{\$}{\leftarrow} \texttt{\textup{PCG.Gen}}\left(1^\lambda\right) \\
+        \end{array} \\
+        \left(R_i\right)_{i \in[n]} & \begin{array}{l}
+        \forall i \in[n]: \quad R_i \leftarrow \texttt{\textup{PCG.Expand}}\left(\kappa_i, i\right)
+        \end{array}
+        \end{array}\right\}
+        $$
+        $$
+        \left\{\begin{array}{l}
+        (\kappa_i)_{i\in\mathcal{C}} \\\\
+        \left(R_i\right)_{i \in[n]} \vphantom{\stackrel{\$}{\leftarrow}}
+        \end{array}\right.
+        \left|\begin{array}{l}
+        \left(\kappa_0, \kappa_1, \ldots, \kappa_{n-1}\right) \stackrel{\$}{\leftarrow} \texttt{\textup{CGen}}\left(1^\lambda\right) \\
+        \forall i \in \mathcal{C}: \quad R_i \leftarrow \texttt{\textup{PCG.Expand}}(\kappa_i, i) \\
+        \left(R_i\right)_{i \in [n]\setminus\mathcal{C}} \stackrel{\$}{\leftarrow} \texttt{\textup{RSample}}\left(1^\lambda, \mathcal{C},\left(R_i^{\prime}\right)_{i \in \mathcal{C}}\right)
+        \end{array}\right\}
+        $$
+    \end{itemize} 
+\end{definition}
+
+The definition of correctness implies that the expansion yields the same correlations as generated by \texttt{\textup{CGen($1^\lambda$)}}. Security-wise, the information leaked by a subset of seeds about the rest of the outputs must be no more than what can be extracted from their expansion.
+
+
+\section{Building Blocks}
+\subsection{Function Secret Sharing}
+\label{prelim:FSS}
+Function Secret Sharing \cite{boyle2015function} (FSS) schemes involve the random division of a secret function \(f\) into two or more component functions \(f_i\), each represented by a unique key \(k_i\), such that the sum of all component function outputs for any given input \(x\), is equal to the output of the original function \(f\), and any subset of the keys \(\{k_i\}\) conceals the secret function \(f\) from any (partial) disclosure. We will use 2-party FSS and formalize it similar to \cite{boyle2020efficient} in the following.
+
+\begin{definition}[\textbf{2-Party Function Secret Sharing}]
+\label{def:FSS}
+    Let $C = \{f: I \rightarrow \mathbb{G}\}$ be a class of functions, where the description of each function $f$ has the input domain $I$ and the output domain $(\mathbb{G}, +)$. We define a 2-party FSS scheme for $C$ as a pair of algorithms \texttt{\textup{(FSS.Gen, FSS.Eval)}} such that
+    \begin{itemize}
+        \item \texttt{\textup{FSS.Gen($1^\lambda, f$)}} is a probabilistic polynomial-time (PPT) algorithm that takes a security parameter $\lambda$ and a function $f \in C$ to produce two keys $(k_0, k_1)$ that imply both $I$ and $\mathbb{G}$.
+        \item \texttt{\textup{FSS.Eval($b, k_b, x$)}} is a deterministic polynomial-time algorithm that takes a key $k_b$ for party $b$ and an input $x$ to output a group element $y_b \in \mathbb{G}$.
+    \end{itemize}
+    The scheme must satisfy the following properties:
+    \begin{itemize}
+        \item \textbf{\textup{\textbf{Correctness:}}} For any $f \in C$, $x \in I$ and generated keys $(k_0, k_1) \stackrel{\$}{\leftarrow}$ \texttt{\textup{FSS.Gen($1^\lambda, f$)}} it holds that $\sum_{b\in\{0,1\}}$\texttt{\textup{FSS.Eval($b, k_b, x$)}} $= f(x)$
+        
+        \item \textbf{\textup{\textbf{Security:}}} For any $b \in \{0,1\}$, the function $\texttt{\textup{Leak}}(f)$ that reveals the input and output domains of $f$ and any PPT distinguisher $\mathcal{D}$, the advantage of $\mathcal{D}$ in distinguishing between $k_b$ generated from \texttt{\textup{FSS.Gen($1^\lambda, f$)}} and a simulated key from $\texttt{\textup{Sim}}(1^\lambda, \texttt{\textup{Leak}}(f))$ is negligible in $\lambda$.
+    \end{itemize}
+\end{definition}
+
+Further, we define $\texttt{\textup{FSS.FullEval($b, k_b$)}}$ as the full-domain evaluation of the function $f$, which outputs a vector of $|I|$ elements in $\mathbb{G}$ representing running \texttt{\textup{FSS.Eval}} on all $x \in I$. For the following instantiations of the FSS scheme for \textit{point functions}, running \texttt{\textup{FSS.FullEval}} is significantly faster than running individual instances of \texttt{\textup{FSS.Eval}} for a full-domain evaluation.
+
+\subsubsection{Applying FSS to Point Functions}
+A \textit{point function} is a function \(f\) that is characterized by a single special point and a corresponding non-zero value, such that all points that are not the special point will result in the function evaluating to zero. We define the instantiation of FSS for a \textit{point function} as follows
+
+\begin{definition}[\textbf{Distributed Point Function (DPF)}]
+For domain $N$, abelian group $\mathbb{G}$, special point $\alpha \in [N]$, and non-zero element $\beta \in \mathbb{G}$, the point function $f_{\alpha, \beta}$ is the function $f_{\alpha, \beta}: [N] \rightarrow \mathbb{G}$ such that $f_{\alpha, \beta}(x) = \beta$ if $x = \alpha$, and $f_{\alpha, \beta}(x) = 0$ otherwise. A distributed point function (DPF) is a FSS scheme for $f_{\alpha, \beta}$.
+\end{definition}
+
+We naturally extend this to a \textit{sum of points function}, so that the function contains $t$ special points, each of which evaluates to a respective non-zero element.
+
+\begin{definition}[\textbf{Distributed Sum of Point Function (DSPF)}]
+\label{def:dspf}
+For $\bm{\alpha} = (\alpha_1,...,\alpha_t) \in [N]^t$ and $\bm{\beta} = (\beta_1,...,\beta_t) \in \mathbb{G}^t$ the sum of points function $f_{\bm{\alpha}, \bm{\beta}}$ is defined by
+$$
+f_{\bm{\alpha}, \bm{\beta}}(x) = \sum_{i=1}^{t} f_{\alpha_i,\beta_i}(x)
+$$
+where each \( f_{\alpha_i,\beta_i}(x) = \beta_i \) if \( x = \alpha_i \) for some \( \alpha_i \) in \( \bm{\alpha} \), and \( f_{\alpha_i,\beta_i}(x) = 0 \) otherwise. A distributed sum of point function (DSPF) is a FSS scheme for $f_{\bm{\alpha}, \bm{\beta}}$.
+\end{definition}
+
+Note that our use of DSPFs for a \texttt{Ring-LPN} based PCG does not require the elements in $\bm{\alpha}$ to be unique \cite{boyle2020efficient}. In the following, we slightly adapt the FSS notation for readability and denote \texttt{DSPF$^t_N$.Gen($1^\lambda, \bm{\alpha}, \bm{\beta}$)} for key generation and \texttt{DSPF$^t_N$.Eval($\sigma, k_\sigma, x$)} for evaluating a share of $f_{\bm{\alpha}, \bm{\beta}}$ at a position $x$. Further, let \texttt{DSPF$^t_N$.FullEval($\sigma, k_\sigma$)} denote a \textit{full domain evaluation} which means calling \texttt{DSPF$^t_N$.Eval($\sigma, k_\sigma, x$)} on all position $x \in [N]$. We reuse the same notation for plain DPFs.
+
+\subsection{OLE and Vector-OLE Correlations}
+\label{prelim:OLE_VOLE}
+Oblivious Linear Evaluation (OLE) is a two-party protocol, wherein the receiver obtains a secret linear combination of two elements possessed by the sender. Specifically, the sender holds a linear function $f(x) = ax + b$, where $a$ and $b$ are secret coefficients. The receiver holds a value $x$ and can compute $f(x)$ without learning anything about $a$ and $b$, and simultaneously, the sender does not learn anything about $x$.
+\\\\
+\textbf{VOLE:} Vector-Oblivious Linear Evaluation (VOLE) is a natural extension of OLE. In the VOLE setting, the sender holds a pair of secret vectors \((\mathbf{a}, \mathbf{b})\), which together define a sequence of linear functions. The functionality allows the receiver to learn \(\mathbf{a}x + \mathbf{b}\) without sharing \(x\) with the sender or the sender revealing \(\mathbf{a}\) and \(\mathbf{b}\) beyond the computed result. This extension allows for the batch processing of linear functions, enhancing efficiency in scenarios that necessitate the simultaneous evaluation of multiple OLE over a constant $x$.
+\\\\
+\textbf{Correlations:} Both constructions can be interpreted as generating correlated tuples. An OLE tuple thus represents a 2-party correlation in which party $P_1$ holds values $(a, b)$ and party $P_2$ holds values $(x, y)$ such that $a\cdot x = y+b$. For VOLE, $x$ is a fixed constant and $(a, b, y)$ become vectors such that $\mathbf{a}\cdot x = \mathbf{y}+\mathbf{b}$.
+
+\subsection{Cyclotomic Polynomials}
+\label{prelim:cyclotomicPolys}
+In abstract algebra, cyclotomic polynomials are irreducible polynomials with integer coefficients that play a fundamental role in the study of field extensions and roots of unity. The $N$-th cyclotomic polynomial, denoted $\Phi_N(X)$ as defined in Equation \ref{eq:prelim_cyclotomic_poly}, is the unique monic polynomial that divides $X^N - 1$, but does not divide $X^k - 1$ for any $k < N$. Its degree is equal to Euler's totient function $\varphi(N)$, which counts the number of integers less than $N$ that are coprime to $N$.
+
+\begin{equation}
+\label{eq:prelim_cyclotomic_poly}
+\Phi_N(X)=\prod_{\substack{1 \leq k \leq N \\ \operatorname{gcd}(k, \eta)=1}}\left(X-e^{2 i \pi \frac{k}{N}}\right).
+\end{equation}
+
+\subsubsection{Roots of unity}
+A key characteristic of cyclotomic polynomials is the existence of special points known as \textit{roots of unity}. These roots play a significant role in algebraic number theory, forming a finite cyclic group under multiplication. The cyclotomic polynomial serves as the minimal polynomial of these roots over the field of rational numbers. The number of roots of unity for a given cyclotomic polynomial is intrinsically tied to its degree. Since the degree is determined by Euler's totient function, $\varphi(N)$, we denote the roots of unity of the $N$-th cyclotomic polynomial as $\xi_j \in (\xi_0, \ldots, \xi_{\varphi(N)})$, where $\Phi_N(\xi_j) = 0$. 
+
+
+\subsection{BBS+ Signature Scheme}
+\label{subsec:prelim_bbs}
+Boneh, Boyen, and Shacham implicitly introduced the BBS signature scheme in the context of one of the first group signature schemes based on bilinear parings \cite{boneh2004short}. Later, Au et al. proposed BBS+ as a provably secure extension of this scheme \cite{au2006constant}. The algebraic structure of BBS+ makes it desirable for anonymous credentials, since it supports efficient zero-knowledge proofs of knowledge alongside selective disclosure while maintaining a small constant-size signature. Recently, Tessaro et al. provided a proof for a variant of BBS+ that produces even smaller signatures \cite{tessaro2023revisiting}, which will have an positive impact on our work, as further described in Section TODO. We will formalize the (full) BBS+ signature scheme in the following.
+
+\begin{construction}[\textbf{BBS+ Signature Scheme}]
+Let $\mathcal{G} = (\mathbb{G}_1, \mathbb{G}_2, \mathbb{G}_T, p, g_1, g_2, e)$ be a bilinear group setting, where $\mathbb{G}_1$ and $\mathbb{G}_2$ are groups of prime order $p$ with generators $g_1 \in \mathbb{G}_1$ and $g_2 \in \mathbb{G}_2$. The map $e: \mathbb{G}_1 \times \mathbb{G}_2 \rightarrow \mathbb{G}_T$ is a bilinear pairing. Let $h_{l \in [0..k]}$ be a set of random elements in $\mathbb{G}_1$. The BBS+ signature scheme is composed of the following polynomial-time algorithms:
+\begin{itemize}
+    \item \texttt{\textup{KeyGen}}$(1^\lambda)$: On input of a security parameter $\lambda$ sample $x \stackrel{\$}{\leftarrow} \mathbb{Z}_p^*$ and compute $y = g_2^x$ to output the key pair $(pk, sk) = (y, x)$.
+    \item \texttt{\textup{Sign}}$_{sk}$$(\{m_{\ell}\}_{\ell \in [k]})$: Given secret key $sk = x$ and a message vector $\{m_{\ell}\}_{\ell \in [k]}$, sample $e, s \stackrel{\$}{\leftarrow} \mathbb{Z}_p$ and compute $A := \left( g_1\cdot h_0^s\cdot \prod_{\ell \in [k]} h_{\ell}^{m_{\ell}} \right)^{\frac{1}{x+e}}$ to output signature $\sigma = (A, e, s)$.
+    \item \texttt{\textup{Verify}}$_{pk}$$(\{m_{\ell}\}_{\ell \in [k]}, \sigma)$: Parse the signature $\sigma = (A, e, s)$ and public key $pk = y$ to output 1 iff $e(A, y \cdot g_2^e) = e(g_1\cdot h_0^s \cdot \prod_{\ell \in [k]} h_{\ell}^{m_{\ell}}, g_2)$.
+\end{itemize}
+\label{definition:bbs+}
+\end{construction}
+The correctness arises from the bilinearity property of the map $e$ and the fact that $A$ is computed as an exponentiation involving the inverse of $x+e$, effectively "canceling out" with $y \cdot g_2^e$ when paired in the bilinear map. Security-wise, the signature scheme is proven to be \textit{strong unforgeable} under the q-strong Diffie Hellman (SDH) assumption \cite{au2006constant}, which implies that an attacker cannot come up with signature forgeries, including forgeries for messages that have already been signed.
