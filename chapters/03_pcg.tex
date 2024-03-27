@@ -205,7 +205,7 @@ In the following, we present a concrete PCG construction by Boyle et al. \cite{b
 The main building block of this construction is a Function Secret Sharing (FSS) scheme (cf. Definition \ref{def:FSS}). The FSS primitive must be able to realize secret sharing of the multiplication of degree-$N$ $t$-sparse polynomials. The result of such a multiplication is always a polynomial of degree $< 2N$ consisting of $t^2$ non-zero coefficients. In vector notation, this results in a $2N$-vector with $t^2$ non-zero elements. This vector can be interpreted as a multi-point function such that the positions of the non-zero elements in the vector are mapped to their respective value. Therefore, the function has a domain $[2N]$ mapping onto $t^2$ non-zero elements. As it's FSS scheme, this construction chooses distributed sum of point functions (DSPFs) for secret sharing the described multi-point functions. Under the derived parameters the DSPF is denoted as $\texttt{DSPF}^{t^2}_{2N}$. A formal definition for DSPFs is provided in Definition \ref{def:dspf}. The concrete PCG construction by Boyle et al. \cite{boyle2020efficient} (although adapted to our notation) is presented in the following:
 
 \begin{specialconstruction}{PCG for Oblivious Linear Evaluation (OLE)}
-
+\label{construction:PCGforOLEImpl}
 \vspace{1em} 
 
 Let $\lambda$ be the security parameter, $(c,t)$ the parameters of the $R^c$-LPN$_t$ assumption, and $p$ the modulus. We denote $N$ as the domain of the PCG. Let $R_p:=\mathbb{Z}_{p}[X]/(F(X))$ be a ring for a degree-$N$ polynomial $F(X) \in \mathbb{Z}_{p}[X]$ and ($\texttt{DSPF}^{t^2}_{2N}$.Gen, $\texttt{DSPF}^{t^2}_{2N}$.Eval) be a FSS scheme for multi-point functions that map a domain $[2N]$ onto $t^2$ non-zero elements. Further, let $\boldsymbol{a} = (1, a_2, ..., a_c)$ for $a_2, ...,a_c \in R_p$ be a public input.
@@ -289,6 +289,7 @@ We present a PCG construction for Vector-OLE (VOLE) correlations in the followin
 The intuition for this PCG is as follows: where we had to secret share the multiplication of two polynomials before, we now need to secret share the multiplication of a polynomial by a constant. As this does not change the degree of the polynomial, the result of the operation under a degree-$N$ $t$-sparse polynomial can be represented by a multi-point function of domain $N$ mapping onto $t$ non-zero elements. Therefore, we can realize a secret sharing using $\texttt{DSPF}^{t}_{N}$. In the following, we formalize the adapted construction.
 
 \begin{specialconstruction}{PCG for Vector Oblivious Linear Evaluation (VOLE)}
+\label{construction:PCGforVOLEImpl}
 
 \vspace{1em}
 
