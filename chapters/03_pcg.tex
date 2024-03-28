@@ -114,11 +114,11 @@ x_0 \otimes x_1 &= (a \otimes e_0 + f_0) \otimes (a \otimes e_1 + f_1) \\
 \end{aligned}
 \end{equation}
 
-\subsection{Splitting the ring through $F(X)$}
+\subsection{Splitting the Ring through $F(X)$}
 \label{subseq:realtiontofx}
 To adapt this to a PCG for OLE over $\mathbb{Z}_p$, cipher-packing techniques from fully homomorphic encryption schemes can be used \cite{smart2014fully}. If the prime $p$ and the polynomial $F(X)$ are carefully chosen, it is possible to decompose $F(X)$ into $n$ linear factors modulo $p$ to get an isomorphism between $R_p$ and $n$ elements in $\mathbb{Z}_p$. This implies that any OLE over $R_p$ can be split up into $n$ individual OLEs over $\mathbb{Z}_p$. Specifically, Boyle et al. \cite{boyle2020efficient} analyze different choices for $F(X)$ and find that cyclotomic polynomials (cf. Section \ref{prelim:cyclotomicPolys}) are the most appropriate since they allow for fast multiplication in $R_p$ using Fast Fourier Transform (FFT). In order to compute the isomorphism, $n$ unique roots of unity ($\xi_0, ...,\xi_{n-1}$) are needed, such that for each root $\xi_l$ it holds that $F(\xi_l)=0$. Then, each party $\sigma$ can evaluate its pair of polynomials $(x_\sigma, z_\sigma)$ on $\xi_l$ to get its share of the $l$th OLE correlation in $\mathbb{Z}_p$.
 
-\subsubsection{Choosing a cyclotomic polynomial}
+\subsubsection{Choosing a Cyclotomic Polynomial}
 An interesting property of $N$-th cyclotomic polynomials (Equation \ref{eq:prelim_cyclotomic_poly}) is that when $N=\eta$ for $\eta$ being a power of two, they take on the following simplified form:
 
 \begin{equation}
@@ -129,7 +129,7 @@ An interesting property of $N$-th cyclotomic polynomials (Equation \ref{eq:preli
 This subset of cyclotomic polynomials is particularly well-suited for use in the \texttt{Ring-LPN} based PCG approach, as it splits completely into $\eta/2$ linear factors modulo $p$ and is easy to compute for any choice of $\eta$. For the construction described above, we require the ring $R_p$ to split into $n$ linear factors modulo $p$. Therefore, assuming $n$ is a power of 2, $F(X)$ is chosen as $\Phi_\eta(X) = \Phi_{2n}(X) = X^n + 1$.
 
 
-\subsubsection{Computing the roots of unity}
+\subsubsection{Computing the Roots of Unity}
 What remains is to calculate the roots of unity for $\Phi_{2n}(X)$ so that for any $\xi_j \in (\xi_0, \ldots, \xi_{n-1})$ it holds that $\Phi_{2n}(\xi_j) = 0$. We achieve this by leveraging the concept of \textit{primitive roots of unity} in $\mathbb{Z}_p$. Recall that a primitive root of unity, $\omega$, in the finite field  $\mathbb{Z}_p$ (where $p$ is prime) satisfies Fermat's Little Theorem:
 
 \begin{equation}
@@ -184,7 +184,7 @@ By integrating Equations \ref{eq:root_main_equasion}, \ref{eq:fermatGeneralized}
 This concludes our proof, showing that Equation \ref{eq:root_main_equasion} generates roots of unity for $\Phi_{2n}(X)$ under the finite field $\mathbb{Z}_p$. 
 \end{proof}
 
-\subsection{Element of unity in $a$}
+\subsection{Element of Unity in $a$}
 Note that Equation \ref{eq:imroved_pcg} includes '$1$' in the tensor product of the public LPN polynomial $a$. The reason for this is that in this notion, $e_0$ and $e_1$ technically serve as the LPN secret with $f_0$ and $f_1$ being the noise. In practice, the LPN secret and the noise can be combined into a single polynomial by fixing a position (or coefficient in the context of \texttt{Ring-LPN}) of $a$ to $1$. This approach becomes more clear when looking at the \texttt{Module-LPN} assumption and the $R^{c}$-LPN$_{t}$ security game (Figure \ref{fig:module-lpn-game}) which represents a generalization of \texttt{Ring-LPN}. Given $c$ randomly sampled ring elements $\tilde{e}_0, \tilde{e}_1, ... \tilde{e}_{c-1}$ and $\tilde{a}_0, \tilde{a}_1, ...\tilde{a}_{c-1}$ for $\tilde{a}_{c-1}=1$  the challenger computes the inner product $\tilde{u}_1$ as
 
 \begin{equation}
@@ -195,7 +195,7 @@ Note that Equation \ref{eq:imroved_pcg} includes '$1$' in the tensor product of 
 while $\tilde{u}_0$ is sampled uniformly at random. Any distinguisher, given access to $\tilde{a}_0, \tilde{a}_1, ..., \tilde{a}_{c-1}$, is considered to win if it can distinguish between $\tilde{u}_0$ and $\tilde{u}_1$ with a non-negligible probability. The challenger wins, if the challenger is not able to do so. Through setting $\tilde{a}_{c-1}$ to $1$ we implicitly utilize $\tilde{e}_{c-1}$ as the LPN noise.
 
 
-\subsection{Complexity improvements}
+\subsection{Complexity Improvements}
 The \texttt{Ring-LPN} based PCG improves upon the quadratic complexity of the naive \texttt{Primal-LPN} based approach presented Section \ref{sec:naivePCG}. Specifically, the computation of $\texttt{FSS.FullEval}$ is now in $O(n)$ since the domain size is limited to $[0, ..., 2n-1]$. Additionally, polynomial multiplication, which is equivalent to computing the tensor product of two vectors, allows for the utilization of fast multiplication algorithms such as FFT. Hence, when FFT is used, the quadratic cost of a tensor product is reduced to a polynomial multiplication of superlinear complexity in $O(n \log n)$.
 
 \section{Construction}
@@ -349,5 +349,5 @@ x_0(\xi_i) \cdot v = z_0(\xi_i)+ z_1(\xi_i)
 \end{equation}
 is the $i$th VOLE correlation in $\mathbb{Z}_{p}$.
 
-\subsubsection{Reduced computational complexity}
+\subsubsection{Reduced Computational Complexity}
 Compared to the complexity of the PCG for OLE, the VOLE construction offers a significant reduction in complexity: PCG.Gen$_{\texttt{VOLE}}$ is now in $O(ct)$, which is a clear improvement over the previous quadratic complexity. Further, the expansion PCG.Expand$_{\texttt{VOLE}}$ is reduced to $O(N)$, enabled by the efficient use of naive multiplication (over FFT) for $z_\sigma$. Although counter-intuitive, this is possible because the dense, degree-$N$ polynomials in $\boldsymbol{a}$ are multiplied by $t$-sparse polynomials in $\boldsymbol{e}$, requiring only $t \cdot N$ integer multiplications. Notice that the DSPF now operates with only $t$ special positions and a smaller domain $N$. While this doesn't change computational complexity, it has a noticeable impact on the construction runtime. We explore this in more detail in Section X.

@@ -1,5 +1,5 @@
 \chapter{Preliminaries}
-\section{LPN-based cryptography}
+\section{LPN-based Cryptography}
 The Learning Parity with Noise (LPN) problem has emerged as a popular hardness assumption in several disciplines, including cryptography, machine learning, and coding theory. The basic concept of LPN is the difficulty of solving linear equations when they are contaminated with noise. This noise significantly increases the complexity of deriving accurate solutions, embodying the hardness of the assumption, which can be related to the NP-complete problem of \textit{decoding random linear codes} \cite{yu2016pseudorandom}. In the context of cryptography, the LPN assumption has found increasing application, particularly in the design of lightweight encryption and authentication schemes \cite{pietrzak2012cryptography}. Many of these applications are provably secure, meaning that any effective attack on such schemes would require overcoming the underlying LPN hardness assumption. In addition, LPN is gaining traction in post-quantum cryptography. Unlike other popular assumptions such as prime factorization and the discrete logarithm problem, which are vulnerable to quantum attacks via Shor's algorithm \cite{shor1999polynomial}, the LPN problem has not yet been efficiently solved by quantum algorithms \cite{zhao2018hardness}. 
 In the following, we describe basic LPN and extend this description to LPN over rings with static leakage, which will serve as the main security assumption in this work.
 
@@ -207,7 +207,7 @@ In abstract algebra, cyclotomic polynomials are irreducible polynomials with int
 \Phi_N(X)=\prod_{\substack{1 \leq k \leq N \\ \operatorname{gcd}(k, \eta)=1}}\left(X-e^{2 i \pi \frac{k}{N}}\right).
 \end{equation}
 
-\subsubsection{Roots of unity}
+\subsubsection{Roots of Unity}
 A key characteristic of cyclotomic polynomials is the existence of special points known as \textit{roots of unity}. These roots play a significant role in algebraic number theory, forming a finite cyclic group under multiplication. The cyclotomic polynomial serves as the minimal polynomial of these roots over the field of rational numbers. The number of roots of unity for a given cyclotomic polynomial is intrinsically tied to its degree. Since the degree is determined by Euler's totient function, $\varphi(N)$, we denote the roots of unity of the $N$-th cyclotomic polynomial as $\xi_j \in (\xi_0, \ldots, \xi_{\varphi(N)})$, where $\Phi_N(\xi_j) = 0$. 
 
 

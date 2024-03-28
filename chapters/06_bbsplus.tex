@@ -59,7 +59,7 @@ We recalled the construction of a non-interactive $n$-out-of-$n$ BBS+ TSS from \
 
 This also works for the other correlations. Notice, that $\delta = a(x+e)$ can be split into an OLE correlation $\delta^0 = ae$ and a VOLE correlation $\delta^1 = ax$, where the secret $x$ is invariant, allowing us to express $\delta$ as the sum $\delta = \delta^0 + \delta^1$. Since there are no other requirements, we can utilize the PCG constructions for (V)OLE correlations introduced in Section \ref{sec:construction} to construct a PCG for BBS+ tuples.
 
-\subsection{PCG construction for BBS+}
+\subsection{PCG Construction for BBS+}
 The basic idea behind combining the (V)OLE constructions of Section \ref{sec:construction} for connecting multiple correlations is that we let the individual PCG instantiations share LPN error vectors strategically. Simultaneously, the LPN error vectors themselves can be utilized as additive shares of $a$, $e$, and $s$. We present the PCG construction for BBS+ tuples (Equation \ref{eq:req_correlations}) in Construction \ref{construction:PCGforBBS+}.
 \\\\
 \textbf{Seed Generation.} For PCG.Gen$_{\texttt{BBS+}}$, we begin with sampling additive secret key shares $sk_i$. We also sample LPN error vectors for every party. Each set of error vectors represents a seed for an additive share of the targeted base parameter $a \sim (\boldsymbol{\omega}, \boldsymbol{\beta})$, $e \sim (\boldsymbol{\eta}, \boldsymbol{\gamma})$, $s \sim (\boldsymbol{\phi}, \boldsymbol{\epsilon})$. In step 3, we initiate the VOLE PCG, for which $sk_i$ serves as the constant parameter. Notice that we multiply the $j$th parties secret share $sk_j$ with $\boldsymbol{\beta}_i$ as we realize a secret share for all cross-term $a_i\cdot sk_j$. For $a_i\cdot sk_i$ a distribution is unnecessary as party $i$ holds all necessary parts. In step 4, we initiate the PCG for OLE for all cross-terms. Notice here how the LPN error vectors of $a$, $(\boldsymbol{\omega}, \boldsymbol{\beta})$ are used for both initiations. This embeds to the relation of the correlations ($\delta_0 = a\cdot e$ and $\alpha = a\cdot s$) the individual PCGs can be expanded for. Ultimately, the seeds that include the party's respective secret key share, the LPN error vectors, and the DSPF keys are returned.
@@ -135,12 +135,76 @@ in $\mathbb{F}_{q}[X] / (F(X))$. Output $\left(\alpha_{i}, \mathrm{sk}_{i}, a_{i
 
 
 \subsubsection{Complexity}
-Although the BBS+ tuples only contain two OLE and one VOLE correlation, the presented PCG primitives for (V)OLE (Section X) realize these correlations for two parties. Therefore, Construction X would need to instantiate significantly more primitives for additional parties; each new party requires additional cross-terms. Naively, for $n$ parties, the PCG for BBS+ would consist of $n^2-1$ individual VOLE PCGs and $2\cdot(n^2-1)$ OLE PCGs. This suggests a potentially suboptimal quadratic scaling for a TSS. However, notice that Construction X intertwines the individual primitives. Recall from Section X that generating ring elements (step 6) dominates the runtime, especially for large $N$. By directly summing the full domain evaluations, we mitigate this step to generating only six ring elements, independent of the number of parties ($n$). Since ring element generation involves the superlinear FFT while full domain evaluations are linear, our construction's overall complexity remains superlinear with respect to the domain size $N$. Section X provides a detailed evaluation of this claim. 
+Although the BBS+ tuples only contain two OLE and one VOLE correlation, the presented PCG primitives for (V)OLE (Section X) realize these correlations for two parties. Therefore, Construction X would need to instantiate significantly more primitives for additional parties; each new party requires additional cross-terms. Naively, for $n$ parties, the PCG for BBS+ would consist of $n^2-1$ individual VOLE PCGs and $2\cdot(n^2-1)$ OLE PCGs. This suggests a potentially quadratic scaling. However, notice that Construction X intertwines the individual primitives. Recall from Section X that generating ring elements (step 6) dominates the runtime, especially for large $N$. By directly summing the full domain evaluations, we mitigate this step to generate only five ring elements, independent of the number of parties ($n$). Since ring element generation involves the superlinear FFT while full domain evaluations are linear, our construction's overall complexity remains superlinear with respect to the domain size $N$. For $n$ on the other hand, we notice that each additional party adds six full domain evaluations (step 2/3) to the expansion. Therefore, Construction X computational complexity is superlinear for domain $N$, and linear for the participating parties $n$. Section X provides a detailed evaluation of these claims.
 
 \subsection{$\tau$-out-of-$n$ setting}
-In particular, the summation of the full domain evaluations in step 2/3 hinders compatibility with a $\tau$-out-of-$n$ setting. In this setting, parties require only specific cross-term subsets determined by the current signer set. Direct summation prevents this selective use. Furthermore, summing all cross-terms together impedes interpolation on secret key shares when employing methods like Shamir's Secret Sharing \cite{shamir1979share}.  
+In particular, the summation of the full domain evaluations in step 2/3 hinders compatibility with a $\tau$-out-of-$n$ setting, for $\tau < n$. In this setting, parties require only specific cross-term subsets determined by the current signer set. Direct summation prevents this selective use. Furthermore, summing all cross-terms together impedes interpolation on secret key shares when employing methods like Shamir's Secret Sharing \cite{shamir1979share}.  
 \\\\
-\textbf{Solution.} We can solve this by individually computing the full domain evaluations and generating a ring element (via $a$) for each. This allows parties to evaluate only the needed ring elements and subsequently interpolate the secret shares according to the signer set. Finally, they can combine all parts to obtain a valid BBS+ tuple. Note that each full domain evaluation must still be computed individually for the VOLE component. However, the forward and backward evaluations can be summed directly in the OLE case since interpolation isn't required. This solution does come with drawbacks. First, there is increased storage overhead since all intermediate results need to be retained. Second, computational overhead arises during the expansion due to creating significantly more ring elements via the inner product with $a$. We implement both settings and analyze the severity of these computational drawbacks in the following section. 
-
+\textbf{Solution.} We can solve this by individually computing the full domain evaluations and generating a ring element (via $a$) for each. This allows parties to evaluate only the needed ring elements and subsequently interpolate the secret shares according to the signer set. Finally, they can combine all parts to obtain a valid BBS+ tuple. Note that each full domain evaluation must be stored individually for the VOLE component (step 2). However, the forward and backward evaluations can be summed directly in the OLE case (step 3) since interpolation isn't required there. This solution does come with drawbacks. First, there is increased storage overhead since all intermediate results (in form or additional ring elements) need to be retained. Second, computational overhead arises during the expansion due to the need of generating significantly more ring elements (one for each cross-term). We analyze the severity of these computational drawbacks in the following section. Note that, depending on the signer set, the ring elements can be recombined before being split. Therefore, there is no overhead at this point, except for a few (negligible) additions determined by $\tau$. Otherwise, $\tau$ has no influence on the complexity of this appraoch.
 
 \section{Evaluation}
+In this section we are going to evaluate our implementation of the PCG for Threshold BBS+ described above. We start with the $n$-out-of-$n$ setting and compare it's performance over different amounts of parties $n$ and domain choices $N$. Further, we evaluate our implementation of the $\tau$-out-of-$n$ setting. We validate, that both settings stay superlinear (regarding $N$) driven through the use of FFT for generating the ring elements and that an increase in parties only comes with an linear increase in runtime. We conclude, that this behavior implies that the use of this PCG for Threshold BBS+ in order to realize an online pre-processing phase to enable an efficient non-interactive offline signing phase is practical. 
+\\\\
+\textbf{Setup.} We reuse the setup of Chapter \ref{chapter:evaluation}, with the same optimizations and parallelization of the building blocks in place. Because of the complexity of the benchmarks and the large number of repetitions within the constructions, we only execute the benchmark for each parameter selection once.
+
+\subsection{$n$-out-of-$n$}
+We evaluate our implementation of the $n$-out-of-$n$ setting for parties $n\in \{2, ..., 10\}$ and domains $N\in \{2^{11}, ...,2^{19}\}$ in Figure \ref{fig:BBSnoutofn}. As expected, we observe a superlinear runtime increase with respect to the domain size $N$ for all party counts. Concurrently, runtime increases linearly as the number of parties ($n$). This aligns with our complexity analysis:
+
+\begin{itemize}
+    \item \textbf{Ring Element Generation:} Independent from $n$, while contributing a superlinear runtime increase for $N$ due the use of FFT.
+    \item \textbf{Full Domain Evaluations:} Instantiations scale with $n$, while their linear $O(N)$ complexity (cf. Section X) aligns with the observed linear increase with respect to party count.
+\end{itemize}
+
+Compared to the original OLE PCG (Figure X), our BBS+ construction achieves a disproportionately favorable runtime, even though it handles multiple correlations (2 OLE, 1 VOLE). Focusing on the two-party case for a fair comparison, a single BBS+ tuple requires 100ms at $N=17$, while a single OLE correlation takes roughly 60ms. This highlights the effectiveness of intertwining the PCG primitives.
+
+\subsection{$\tau$-out-of-$n$}
+We evaluate our implementation of the $\tau$-out-of-$n$ setting for $\tau = 2$, parties $n\in \{3, ..., 10\}$ and domains $N\in \{2^{11}, ...,2^{18}\}$ in Figure \ref{fig:BBSnoutofn}. We observe again, that the runtime increases superlinear for domain $N$. In contrast to the $n$-out-of-$n$ setting before, the runtime increase over $N$ is notably steeper. This behavior derives from the fact that the construction now needs to deal with more ring elements, leading to more frequent use of FFT. Since FFT is used more frequently, the primitive has a higher (non-linear) impact on the total runtime. 
+\\\\
+Directly comparing runtimes, we find the $\tau$-out-of-$n$ implementation takes roughly 37\% longer for $N=17$ and $n=3$, with similar differences existing for other values of $n$. This confirms that the presented adaption for realizing the $\tau$-out-of-$n$ setting, while introducing some overhead, remains computationally manageable.
+
+\subsection{Identifying Bottlenecks}
+Recall that in individual (V)OLE constructions, generating ring elements using FFT was the primary performance bottleneck, especially for large domains. However, let's analyze how this changes within the context of the BBS+ PCG. Figure \ref{fig:runtimeAllocationComparision} breaks down the construction's runtime for different party counts ($n$) on $N=17$.
+\\\\
+In the $\tau$-out-of-$n$ setting, the proportion of time spent on full domain evaluations versus ring element generation remains roughly constant. The reason for this is that as $n$ becomes larger, more full domain evaluations are needed for each of which additional ring elements need to be created. Therefore the runtime allocation is close to constant for this case. Interestingly, in the $n$-out-of-$n$ setting, ring element generation becomes less dominant. This trend is expected, as the number of ring elements stays fixed while full domain evaluations increase with $n$.  Surprisingly, in contrast to FFT being costly within the individual (V)OLE PCG, our analysis reveals that full domain evaluations of DSPFs represent the primary bottleneck in the BBS+ PCG. Therefore, we determine that further optimizing this building block would significantly improve the overall construction's performance.
+
+\subsection{Implications on the TSS scheme}
+We notice that the presented benchmarks show the apllicablity of a PCG for this BBS+ scheme.
+implementation benefits Blablabla. The results are blabla.  
+
+\textbf{Overhead in the Offline Phase}
+% Idea: For the tau out of n case, we cannot split the ring on all roots of unity AS we need the singing set for this. Therefore this step adds to the offline phase and needs to be performed during signing. This brings additional overhead.
+
+\textbf{Comparison with [].}
+
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[scale=0.49]{images/plots/bbs_pcg_NoutofN.png}
+    \caption{$n$-out-of-$n$ BBS+ PCG expansion over $N$}
+    \label{fig:BBSnoutofn}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[scale=0.49]{images/plots/bbs_pcg_TAUoutofN.png}
+    \caption{$2$-out-of-$n$ BBS+ PCG expansion over $N$}
+    \label{fig:BBStauoutofn}
+\end{figure}
+
+\begin{figure}[t]
+    %\centering
+    \hspace{-1em}
+    \begin{subfigure}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[scale=0.49]{images/plots/bbs_noutofN_percentage_dist.png}
+        \caption{$n$-out-of-$n$}
+    \end{subfigure}
+    \hspace{0em}
+    \begin{subfigure}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[scale=0.49]{images/plots/bbs_TAUoutofN_percentage_dist.png}
+        \caption{$2$-out-of-$n$}
+    \end{subfigure}
+    \label{fig:runtimeAllocationComparision}
+    \caption{Comparing runtime allocation of $n$-out-of-$n$ with $2$-out-of-$n$ for $N=17$}
+\end{figure}
