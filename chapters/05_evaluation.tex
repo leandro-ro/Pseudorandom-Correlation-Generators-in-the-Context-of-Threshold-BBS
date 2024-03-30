@@ -2,7 +2,7 @@
 \label{chapter:evaluation}
 This chapter assesses the performance of our implementation, with initial benchmarks for the core building blocks, followed by benchmarks for the full OLE and VOLE PCG construction. The goal for each building block is to keep the runtime linear with respect to the PCG domain $N$. Recall that $N$ determines the number of individual (V)OLE correlations expandable from a single PCG instantiation. Linear scaling across building blocks is crucial to offset setup costs and reduce the amortized runtime per correlation as more (V)OLEs are generated. We demonstrate that most building blocks successfully achieve linearity through careful optimization. However, the use of FFT for high-degree polynomial multiplication introduces a superlinear element within the overall PCG construction.
 \\\\
-\textbf{Setup.} Our benchmark environment utilizes a Xeon Gold 5120 CPU @ 2.20GHz processor with 14 cores (multi-threading disabled) and 64GB of RAM. Parallelization is handled using Go routines and a worker pool to optimize thread utilization. Unless otherwise noted, all benchmarks are repeated a minimum of 10 times to account for statistical irregularities. Benchmarking is facilitated by the Go built-in testing package. 
+\textbf{Setup.} Our benchmark environment utilizes a Xeon Gold 5120 CPU @ 2.20GHz with 14 cores (multi-threading disabled) and 64GB of RAM. Parallelization is handled using Go routines and a worker pool to optimize thread utilization. All benchmarks are repeated a minimum of 10 times to account for statistical irregularities. Benchmarking is facilitated by the Go built-in testing package. 
 
 \section{Building Blocks}
 We start by examining the individual building blocks and providing insight into the performance characteristics of each component, allowing us to identify potential bottlenecks and additional areas for optimization for the final PCG construction. Therefore, all test parameters are chosen based on the LPN security parameters $(c,t)=(4,16)$ and the domain $N$ used for the final construction. We also benchmark naive implementations for every component to quantify the practical considerations proposed in Chapter \ref{chapter:ImplementingPCGs}.
@@ -78,7 +78,7 @@ In Section X, we outline how Horner's method optimizes polynomial evaluation to 
 \begin{figure}[t]
     \centering
     \includegraphics[scale=0.49]{images/plots/poly_eval.png}
-    \caption{Comparing approaches to polynomial evaluation of two dense degree $N$ polynomials}
+    \caption{Comparing approaches to polynomial evaluation of a dense degree-$N$ polynomial}
     \label{fig:polyEvalBench}
 \end{figure}
 
