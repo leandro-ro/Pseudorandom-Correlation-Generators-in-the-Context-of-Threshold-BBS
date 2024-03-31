@@ -113,6 +113,7 @@ The VOLE construction requires four calls to \texttt{DSPF$^{t}_{N}$.Gen}. With $
 Interestingly, the domain size $N$ has a relatively minor impact on generation time. This comes from the tree-based approach used within the underlying DPFs. Doubling $N$ leads to a roughly constant increase in operations (proportional to $t$ or $t^2$), due to the fixed value of $t$. 
 
 \subsection{Expansion}
+\label{subsec:evalExpansionVOLE}
 We present the runtimes of the PCG constructions relative to the amount of (V)OLE correlation they generate in Figure \ref{fig:ComparingPCGExpansion}. This figure also separately visualizes the added cost of extracting correlations (splitting the ring elements) via polynomial evaluation on a root of unity. Observe the superlinear scaling for both OLE and VOLE constructions with respect to $N$. As discussed previously, this primarily stems from the superlinear nature of polynomial multiplication using FFT, despite achieving linearity in other building blocks. It is worth emphasizing that compared to the expansion itself, our optimized computation of roots of unity adds negligible overhead. For example, with $N=2^{18}$, this step adds only 0.24 ms per correlation. Therefore, this is not part of our evaluation.
 
 \begin{figure}[t]

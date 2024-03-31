@@ -65,6 +65,7 @@ Blakley and Shamir introduced the concept of threshold secret sharing \cite{blak
 \textbf{Threshold signature schemes.} Bringing this concept over to signature schemes, Desmedt and Yair later proposed the first thresholdized signature scheme based on RSA \cite{desmedt1991shared}. Analogous to threshold secret sharing, in a $t$-out-of-$n$ threshold signature scheme a collective of any $t$ participants can generate a valid signature on a message that is verifiable using a single, publicly known key. The distribution of secret shares can be facilitated either by a trusted dealer or by a dealer-less setup involving interactive protocols among the participants.
 
 \begin{definition}[\textbf{$t$-out-of-$n$ Threshold Signature Scheme (TSS)}]
+    \label{def:tss}
     Let $P_0,...,P_{n-1}$ denote the parties participating and let $t$ be the threshold, such that $t \leq n-1$. We define a $t$-out-of-$n$ TSS as a tuple of algorihtms \texttt{\textup{(ThreshKeyGen, ThreshSig, CombineSig, Verify)}} such that
     \begin{itemize}
         \item \texttt{\textup{ThreshKeyGen($1^\lambda$)}} is a probabilistic polynomial-time algorithm that takes a security parameter $\lambda$ to output to each party $P_{i\in [n]}$ the public key $pk$ as well as a private key share $sk_i$.
