@@ -15,6 +15,12 @@
 \usepackage{hyperref}
 \usepackage{amsmath,amssymb}
 \usepackage{subcaption} % For subfigures with their own captions
+\usepackage[
+backend=biber,
+style=alphabetic,
+sorting=ynt
+]{biblatex}
+\addbibresource{bibliography.bib}
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{construction}{Construction}
@@ -89,8 +95,8 @@
         \include{chapters/07_conclusion}
         
 	\newpage
-    \bibliographystyle{unsrt}
-    \bibliography{ref}
-	
+    %\bibliographystyle{unsrt}
+    %\bibliography{ref}
+	\printbibliography
 	\appendix
 \end{document}
