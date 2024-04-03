@@ -197,6 +197,7 @@ while $\tilde{u}_0$ is sampled uniformly at random. Any distinguisher, given acc
 
 
 \subsection{Complexity Improvements}
+\label{subsec:VOLEConstruction}
 The \texttt{Ring-LPN} based PCG improves upon the quadratic complexity of the naive \texttt{Primal-LPN} based approach presented Section \ref{sec:naivePCG}. Specifically, the computation of $\texttt{FSS.FullEval}$ is now in $O(n)$ since the domain size is limited to $[0, ..., 2n-1]$. Additionally, polynomial multiplication, which is equivalent to computing the tensor product of two vectors, allows for the utilization of fast multiplication algorithms such as FFT. Hence, when FFT is used, the quadratic cost of a tensor product is reduced to a polynomial multiplication of superlinear complexity in $O(n \log n)$.
 
 \section{Construction}

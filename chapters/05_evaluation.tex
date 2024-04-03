@@ -37,10 +37,10 @@ We evaluate the performance of the DSPF full domain evaluation based on its diff
 \end{figure}
 
 \subsection{Operations on Polynomials of High Degree}
-In the following, we evaluate the runtime of our polynomial arithmetic implementation, specifically optimized for the PCG use case, where support for high-degree polynomial operations is needed. We evaluate the techniques proposed in Section \todo X for polynomials of up to degree $2^{20}$. These include the Fast Fourier Transform (FFT), sparse polynomial multiplication, and Horner's method. The results indicate that the PCG construction benefits significantly from the strategic use of the techniques used. Without these optimizations, the PCG would not be practical within reasonable time constraints.
+In the following, we evaluate the runtime of our polynomial arithmetic implementation, specifically optimized for the PCG use case, where support for high-degree polynomial operations is needed. We evaluate the techniques proposed in Section \ref{sec:polyOperationsImpl} for polynomials of up to degree $2^{20}$. These include the Fast Fourier Transform (FFT), sparse polynomial multiplication, and Horner's method. The results indicate that the PCG construction benefits significantly from the strategic use of the techniques used. Without these optimizations, the PCG would not be practical within reasonable time constraints.
 
 \subsubsection{Dense Multiplication}
-Dense degree $N$ polynomials possess non-zero coefficients for all terms ranging from the constant to $x^N$. As detailed in Section \todo X, their naive multiplication has a computational complexity of $O(N^2)$. On the contrary, the Fast Fourier Transform (FFT) optimizes this operation to $O(N \log N)$. In Figure \ref{fig:polyMultNaiveVsFFT} we present benchmarks for both approaches for $N\in \{2^{10}, ..., 2^{20}\}$. The results confirm the stark difference in scaling: The naive approach demonstrates significantly worse performance compared to the near-linear (or superlinear) runtime achieved by the FFT. The difference between both approaches underlines the importance of using FFT for high-degree polynomial multiplications and, therefore, the PCG implementation.
+Dense degree $N$ polynomials possess non-zero coefficients for all terms ranging from the constant to $x^N$. As detailed in Section \ref{subsec:multviaFFT}, their naive multiplication has a computational complexity of $O(N^2)$. On the contrary, the Fast Fourier Transform (FFT) optimizes this operation to $O(N \log N)$. In Figure \ref{fig:polyMultNaiveVsFFT} we present benchmarks for both approaches for $N\in \{2^{10}, ..., 2^{20}\}$. The results confirm the stark difference in scaling: The naive approach demonstrates significantly worse performance compared to the near-linear (or superlinear) runtime achieved by the FFT. The difference between both approaches underlines the importance of using FFT for high-degree polynomial multiplications and, therefore, the PCG implementation.
 
 \begin{figure}[t]
     \centering
@@ -50,7 +50,7 @@ Dense degree $N$ polynomials possess non-zero coefficients for all terms ranging
 \end{figure}
 
 \subsubsection{Sparse Multiplication}
-Sparse polynomials of degree $N$ possess only a few non-zero coefficients within the terms ranging from the constant to $x^N$. In Section \todo X, we claim that, for certain scenarios, naive multiplication of sparse polynomials could outperform the FFT when zero-coefficient multiplications are efficiently handled. Figure \ref{fig:naiveVsFFTSparsePolys} validates this claim by benchmarking the multiplication of polynomials with varying sparsity for degrees $N=2^{15}$ and $N=2^{18}$. As the complexity of FFT depends solely on the degree of the result, its runtime remains constant for a fixed $N$.  Conversely, the naive approach scales quadratically with sparsity but exhibits significantly lower runtimes for very sparse polynomials. Importantly, the higher the degree $N$, the wider the sparsity range where the naive approach outperforms FFT. In practice, accounting for this in the PCG implementation poses a significant performance increase as the LPN error polynomials are chosen $\tau$-sparse. When we account for $\tau=16$ and $N=2^{18}$, a naive multiplication takes only a few ms instead multiple seconds using FFT.
+Sparse polynomials of degree $N$ possess only a few non-zero coefficients within the terms ranging from the constant to $x^N$. In Section \ref{subesec:exploitingSparsity}, we claim that, for certain scenarios, naive multiplication of sparse polynomials could outperform the FFT when zero-coefficient multiplications are efficiently handled. Figure \ref{fig:naiveVsFFTSparsePolys} validates this claim by benchmarking the multiplication of polynomials with varying sparsity for degrees $N=2^{15}$ and $N=2^{18}$. As the complexity of FFT depends solely on the degree of the result, its runtime remains constant for a fixed $N$.  Conversely, the naive approach scales quadratically with sparsity but exhibits significantly lower runtimes for very sparse polynomials. Importantly, the higher the degree $N$, the wider the sparsity range where the naive approach outperforms FFT. In practice, accounting for this in the PCG implementation poses a significant performance increase as the LPN error polynomials are chosen $\tau$-sparse. When we account for $\tau=16$ and $N=2^{18}$, a naive multiplication takes only a few ms instead multiple seconds using FFT.
 
 \begin{figure}[t]
     %\centering
@@ -71,9 +71,9 @@ Sparse polynomials of degree $N$ possess only a few non-zero coefficients within
 \end{figure}
 
 \subsubsection{Evaluation}
-In Section \todo X, we outline how Horner's method optimizes polynomial evaluation to achieve linear $O(N)$ complexity, a significant improvement over the naive quadratic approach. To validate this, we present benchmarks for evaluating polynomials of degree $N \in \{2^{11}, ..., 2^{20}\}$ in Figure \ref{fig:polyEvalBench}. As expected, the naive approach shows worse performance, especially as $N$ increases. Horner's method demonstrates a clear linear runtime increase, enabling the evaluation of a degree $N=2^{20}$ polynomial at a specific position in approximately 165ms. However, after PCG expansion, $N$ individual position needs to be evaluated on (multiple) polynomials to extract all (V)OLE correlations. This underscores the importance of polynomial evaluation for the PCG.
+In Section \ref{subsec:horner}, we outline how Horner's method optimizes polynomial evaluation to achieve linear $O(N)$ complexity, a significant improvement over the naive quadratic approach. To validate this, we present benchmarks for evaluating polynomials of degree $N \in \{2^{11}, ..., 2^{20}\}$ in Figure \ref{fig:polyEvalBench}. As expected, the naive approach shows worse performance, especially as $N$ increases. Horner's method demonstrates a clear linear runtime increase, enabling the evaluation of a degree $N=2^{20}$ polynomial at a specific position in approximately 165ms. However, after PCG expansion, $N$ individual position needs to be evaluated on (multiple) polynomials to extract all (V)OLE correlations. This underscores the importance of polynomial evaluation for the PCG.
 \\\\
-\textbf{Parallelization.} To address a potential bottleneck, we explore parallelization. Unlike parallelizing multiple evaluations, our strategy directly enhances performance for single-point evaluations – potentially beneficial if storage complexity is a concern and parties split the ring on demand (Section \todo X). Our parallelized implementation of Horner's method achieves a near-10x speedup, demonstrating good hardware utilization. This reduces the evaluation time for a degree $N=2^{20}$ polynomial to 17.7ms, down from 165ms.
+\textbf{Parallelization.} To address a potential bottleneck, we explore parallelization. Unlike parallelizing multiple evaluations, our strategy directly enhances performance for single-point evaluations – potentially beneficial if storage complexity is a concern and parties split the ring on demand (cf. Section \ref{sec:fxconsiderationsImpl}). Our parallelized implementation of Horner's method achieves a near-10x speedup, demonstrating good hardware utilization. This reduces the evaluation time for a degree $N=2^{20}$ polynomial to 17.7ms, down from 165ms.
 
 \begin{figure}[t]
     \centering
@@ -84,24 +84,25 @@ In Section \todo X, we outline how Horner's method optimizes polynomial evaluati
 
 
 \subsection{Computing Roots of Unity}
-In the following, we evaluate our implementation for computing all roots of unity for the $2N$-th cyclotomic polynomial. As outlined in Section \todo X, we implemented two approaches: the naive method directly iterates over Equation X to generate all roots of unity, while the optimized approach leverages a Horner inspired technique to reuse exponentiations for improved efficiency. The benchmarks for $N=\{2^{15}, ..., 2^{20}\}$ (Figure X) show that the optimized approach scales linearly. This is beneficial for PCG construction, as it does not negatively affect the time required per (V)OLE correlation for higher PCG domains. Note also that we achieve a significant performance improvement of about 11x over the naive method.
+In the following, we evaluate our implementation for computing all roots of unity for the $2N$-th cyclotomic polynomial. As outlined in Section \ref{sec:fxconsiderationsImpl}, we implemented two approaches: the naive method directly iterates over Equation \ref{eq:root_main_equasion} to generate all roots of unity, while the optimized approach leverages a Horner inspired technique to reuse exponentiations for improved efficiency. The benchmarks for $N=\{2^{15}, ..., 2^{20}\}$ (Figure \ref{fig:ComparingRootOfUnityAp}) show that the optimized approach scales linearly. This is beneficial for PCG construction, as it does not negatively affect the time required per (V)OLE correlation for higher PCG domains. Note also that we achieve a significant performance improvement of about 11x over the naive method.
 
 \begin{figure}[t]
     \centering
     \includegraphics[scale=0.49]{images/plots/gen_roots.png}
     \caption{Comparing approaches to generate all \textit{roots of unity} for the $2N$-th cyclotomic polynomial}
+    \label{fig:ComparingRootOfUnityAp}
 \end{figure}
 
 
 \section{PCG Construction}
-In this section, we evaluate the PCG construction of Section \todo X for different domains $N$. We choose the LPN parameters to be $(c,\tau)=(4,16)$ which achieve $128$-bit security, as shown by Boyle et al. \cite{boyle2020efficient}. 
+In this section, we evaluate the PCG construction presented in Section \ref{subsec:VOLEConstruction} for different domains $N$. We choose the LPN parameters to be $(c,\tau)=(4,16)$ which achieve $128$-bit security, as reported by Boyle et al. \cite{boyle2020efficient}. 
 % Benchmarks are conducted for domain sizes $N\in\{2^{10}, ..., 2^{18}\}$. 
 
 \subsection{Generation}
 \label{subsec:evalGen}
 Figure \ref{fig:ComparingPCGGeneration} presents the runtime of PCG seed generation, particularly when using a trusted dealer. This contrasts with the higher overhead of distributed generation algorithms, which are not part of this work. It is worth noting that distributed generation alternatives exist, but they introduce significant performance tradeoffs.
 \\\\
-The VOLE construction requires four calls to \texttt{DSPF$^{t}_{N}$.Gen}. With $t=16$, this translates into 64 underlying DPF calculations (see Section \todo X for more context). On the contrary, the OLE construction performs 16 calls to \texttt{DSPF$^{\tau^2}_{2N}$.Gen}, demanding a significantly higher 4096 DPF computations. This 64x increase in DPFs aligns well with the benchmark results. For $N=2^{18}$, the OLE runtime of 0.44s is approximately 68 times longer than the VOLE's 0.0064s. 
+The VOLE construction requires four calls to \texttt{DSPF$^{t}_{N}$.Gen}. With $t=16$, this translates into 64 underlying DPF calculations (see Section \todo X for more context). On the contrary, the OLE construction performs 16 calls to \texttt{DSPF$^{\tau^2}_{2N}$.Gen}, demanding a significantly higher 4096 DPF computations. This 64x increase in DPFs aligns well with the benchmark results. For $N=2^{18}$, the OLE runtime of 0.44s is approximately 68 times longer than the VOLE's 0.0064s. Interestingly, the domain size $N$ has a relatively minor impact on generation time. This comes from the tree-based approach used within the underlying DPFs. Doubling $N$ leads to a roughly constant increase in operations (proportional to $\tau$ or $\tau^2$), due to the fixed value of $\tau$. 
 
 \begin{figure}[t]
     \centering
@@ -109,8 +110,6 @@ The VOLE construction requires four calls to \texttt{DSPF$^{t}_{N}$.Gen}. With $
     \caption{Comparing the PCG expansion OLE and VOLE}
     \label{fig:ComparingPCGGeneration}
 \end{figure}
-
-Interestingly, the domain size $N$ has a relatively minor impact on generation time. This comes from the tree-based approach used within the underlying DPFs. Doubling $N$ leads to a roughly constant increase in operations (proportional to $\tau$ or $\tau^2$), due to the fixed value of $\tau$. 
 
 \subsection{Expansion}
 \label{subsec:evalExpansionVOLE}
