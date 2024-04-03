@@ -32,11 +32,12 @@ We evaluate the performance of the DSPF full domain evaluation based on its diff
         \includegraphics[scale=0.49]{images/plots/full_eval_t256.png}
         \caption{$p =\ tau^2 = 256$}
     \end{subfigure}
-    \label{fig:fullEvalChart}
     \caption{Comparison of sequential and parallel processing of \texttt{DSPF.FullEval}$_N^p$ for $t=16$}
+    \label{fig:fullEvalChart}
 \end{figure}
 
 \subsection{Operations on Polynomials of High Degree}
+\label{subsec:evalOpOnHighDegreePoly}
 In the following, we evaluate the runtime of our polynomial arithmetic implementation, specifically optimized for the PCG use case, where support for high-degree polynomial operations is needed. We evaluate the techniques proposed in Section \ref{sec:polyOperationsImpl} for polynomials of up to degree $2^{20}$. These include the Fast Fourier Transform (FFT), sparse polynomial multiplication, and Horner's method. The results indicate that the PCG construction benefits significantly from the strategic use of the techniques used. Without these optimizations, the PCG would not be practical within reasonable time constraints.
 
 \subsubsection{Dense Multiplication}
@@ -84,6 +85,7 @@ In Section \ref{subsec:horner}, we outline how Horner's method optimizes polynom
 
 
 \subsection{Computing Roots of Unity}
+\label{subsec:evalRootOfUnity}
 In the following, we evaluate our implementation for computing all roots of unity for the $2N$-th cyclotomic polynomial. As outlined in Section \ref{sec:fxconsiderationsImpl}, we implemented two approaches: the naive method directly iterates over Equation \ref{eq:root_main_equasion} to generate all roots of unity, while the optimized approach leverages a Horner inspired technique to reuse exponentiations for improved efficiency. The benchmarks for $N=\{2^{15}, ..., 2^{20}\}$ (Figure \ref{fig:ComparingRootOfUnityAp}) show that the optimized approach scales linearly. This is beneficial for PCG construction, as it does not negatively affect the time required per (V)OLE correlation for higher PCG domains. Note also that we achieve a significant performance improvement of about 11x over the naive method.
 
 \begin{figure}[t]
@@ -102,7 +104,7 @@ In this section, we evaluate the PCG construction presented in Section \ref{subs
 \label{subsec:evalGen}
 Figure \ref{fig:ComparingPCGGeneration} presents the runtime of PCG seed generation, particularly when using a trusted dealer. This contrasts with the higher overhead of distributed generation algorithms, which are not part of this work. It is worth noting that distributed generation alternatives exist, but they introduce significant performance tradeoffs.
 \\\\
-The VOLE construction requires four calls to \texttt{DSPF$^{t}_{N}$.Gen}. With $t=16$, this translates into 64 underlying DPF calculations (see Section \todo X for more context). On the contrary, the OLE construction performs 16 calls to \texttt{DSPF$^{\tau^2}_{2N}$.Gen}, demanding a significantly higher 4096 DPF computations. This 64x increase in DPFs aligns well with the benchmark results. For $N=2^{18}$, the OLE runtime of 0.44s is approximately 68 times longer than the VOLE's 0.0064s. Interestingly, the domain size $N$ has a relatively minor impact on generation time. This comes from the tree-based approach used within the underlying DPFs. Doubling $N$ leads to a roughly constant increase in operations (proportional to $\tau$ or $\tau^2$), due to the fixed value of $\tau$. 
+The VOLE construction requires four calls to \texttt{DSPF$^{t}_{N}$.Gen}. With $t=16$, this translates into 64 underlying DPF calculations (cf. Section \ref{subseq:constructingTBDSPFs}). On the contrary, the OLE construction performs 16 calls to \texttt{DSPF$^{\tau^2}_{2N}$.Gen}, demanding a significantly higher 4096 DPF computations. This 64x increase in DPFs aligns well with the benchmark results. For $N=2^{18}$, the OLE runtime of 0.44s is approximately 68 times longer than the VOLE's 0.0064s. Interestingly, the domain size $N$ has a relatively minor impact on generation time. This comes from the tree-based approach used within the underlying DPFs. Doubling $N$ leads to a roughly constant increase in operations (proportional to $\tau$ or $\tau^2$), due to the fixed value of $\tau$. 
 
 \begin{figure}[t]
     \centering
@@ -114,14 +116,7 @@ The VOLE construction requires four calls to \texttt{DSPF$^{t}_{N}$.Gen}. With $
 \subsection{Expansion}
 \label{subsec:evalExpansionVOLE}
 We present the runtimes of the PCG constructions relative to the amount of (V)OLE correlation they generate in Figure \ref{fig:ComparingPCGExpansion}. This figure also separately visualizes the added cost of extracting correlations (splitting the ring elements) via polynomial evaluation on a root of unity. Observe the superlinear scaling for both OLE and VOLE constructions with respect to $N$. As discussed previously, this primarily stems from the superlinear nature of polynomial multiplication using FFT, despite achieving linearity in other building blocks. It is worth emphasizing that compared to the expansion itself, our optimized computation of roots of unity adds negligible overhead. For example, with $N=2^{18}$, this step adds only 0.24 ms per correlation. Therefore, this is not part of our evaluation.
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[scale=0.49]{images/plots/pcg_eval.png}
-    \caption{Runtime comparison of the PCG expansion for OLE and VOLE over $N$}
-    \label{fig:ComparingPCGExpansion}
-\end{figure}
-
+\\\\
 We observe a nearly exponential runtime increase in OLE construction for small $N$, transitioning to the expected superlinear increase as $N$ grows. We identify this behavior as an effect of the parallelization overhead that dominates in small domains. As $N$ increases, the parallelization setup cost amortizes, revealing the construction's expected superlinear runtime. The same applies to the VOLE construction, but is less visible due to the figures scaling. Notably, the VOLE construction scales more favorably than OLE construction, exhibiting a near-linear runtime. Several factors explain this:
 
 \begin{itemize}
@@ -132,14 +127,21 @@ We observe a nearly exponential runtime increase in OLE construction for small $
     \item \textbf{Exploiting Sparsity:} The VOLE construction involves more sparse polynomial multiplications. Here, our optimized approach strategically selects the more efficient naive method, further improving performance.
 \end{itemize}
 
+\begin{figure}[t]
+    \centering
+    \includegraphics[scale=0.49]{images/plots/pcg_eval.png}
+    \caption{Runtime comparison of the PCG expansion for OLE and VOLE over $N$}
+    \label{fig:ComparingPCGExpansion}
+\end{figure}
+
 \textbf{Splitting the Ring:} Note that the (V)OLE constructions do not include the splitting of the ring elements. However, since this is a crucial practical step, we include the overhead it introduces in Figure \ref{fig:ComparingPCGExpansion} separately. Our parallelized optimizations of Horner's method for polynomial evaluation yield noticeable benefits, resulting in a moderate overhead for the constructions. At $N=2^{18}$, the increase is 39.35\% for VOLE and only 6.34\% for OLE. While the absolute runtime for this operation is identical in both cases, the proportional increase is higher for the VOLE construction due to its lower overall runtime. Therefore, we find that further optimizations would be valuable, particularly to reduce the overhead associated with ring splitting in the VOLE case.
 \\\\
 \textbf{Full Domain Evaluation:} Processing DSPF full domain evaluations contributes significantly to the overall runtime of the OLE construction, with less of an impact on the VOLE construction. This is analogous to the PCG seed generation described in Section \ref{subsec:evalGen}. Observe the following for LPN-Parameters $(c,\tau)=(4,16)$:
 \begin{itemize}
 \item OLE Construction: Employs 16x \texttt{DSPF$^{\tau^2}_{2N}$.FullEval}, which implies 4096 DPF full domain evaluation on domain $2N$.
-\item VOLE: Utilizing 4x \texttt{DSPF$^{\tau}_{N}$.FullEval}, which implies only 64 DPF full domain evaluation on (smaller) domain $N$.
+\item VOLE Construction: Utilizing 4x \texttt{DSPF$^{\tau}_{N}$.FullEval}, which implies only 64 DPF full domain evaluation on (smaller) domain $N$.
 \end{itemize}
-This disparity, coupled with the higher frequency of polynomial multiplication, provides a clear explanation for the longer runtime and worse scaling of the OLE construction. Although we observe these attributes, we believe that the superlinear performance of both constructions is practical and present an application in Chapter X.
+This disparity, coupled with the higher frequency of polynomial multiplication, provides a clear explanation for the longer runtime and worse scaling of the OLE construction. Although we observe these attributes, we believe that the superlinear performance of both constructions is practical and present an application in Chapter \ref{chapter:PCGforBBSPlus}.
 \\\\
 \textbf{Profiling:} We suggested that FFT-based polynomial multiplications are the primary runtime bottleneck of the PCG constructions. Although this is indeed the case for large $N$, we found that the (relative) impact of the FFT varies and applies differently on the OLE and VOLE construction. To quantify this behavior, we profile the runtime distribution between generating ring elements (where FFT is used) and the DSPF full domain evaluations in Figure \ref{fig:runtimeAllocationComparision}. We observe that for the OLE construction, the superlinarity of the FFT becomes dominant only for larger $N$. This is also due to the fact that the runtime required for the (large) DSPF full domain evaluations is quite high to begin with, which is less the case for the smaller DSPF domains in the VOLE case as described before. Simultaneously, this is the reason why the FFT is more dominant for smaller $N$ in the VOLE construction. Recall from Section \ref{subsec:evalDspfFullDomain} that the advantage of parallelizing the full domain evaluation for the OLE case increases with larger $N$ compared to the VOLE case. We recognize this effect here, as the increase in the dominance of the FFT increases steadily for OLE, but flattens out for VOLE. Ultimately, the superlinear nature of the FFT implies that its relative share of the runtime will approach 100\% in both constructions if $N$ is large enough.
 
