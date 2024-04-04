@@ -2,7 +2,7 @@
 \label{chapter:PCGforVOLE}
 In this chapter, we recall a PCG variant based on the $R^{c}$-LPN$_{\tau}$ assumption (cf. Figure \ref{fig:module-lpn-game}) first proposed by Boyle et al. in \cite{boyle2020efficient}. The PCG supports expansion to (Vector-)OLE correlations, giving it many applications in cryptographic constructions. We begin with a simplified PCG based on the $\texttt{Primal-LPN}$ assumption. We then show how this approach is adapted to achieve an efficient PCG based on $\texttt{Ring-LPN}$. Finally, we recall the concrete PCG construction based on $R^{c}$-LPN$_{\tau}$ for OLE \cite{boyle2020efficient} and show an adaption that realizes VOLE correlations.
 
-\section{PCG based on Primal-LPN}
+\section{PCG based on Dual-LPN}
 \label{sec:naivePCG}
 We first introduce a naive approach under a simplified setting. This PCG is based on LPN over a Ring $\mathbb{Z}_p$, which is, in fact, equivalent to $\texttt{Primal-LPN}$ \cite{blum1993cryptographic}, but for simplicity we follow the $\texttt{Dual-LPN}$ assumption for this approach. We can do this, as $\texttt{Dual-LPN}$ itself is equivalent to $\texttt{Primal-LPN}$ \cite{couteau2021silver}. Recall that under $\texttt{Dual-LPN}$, we assume that two distributions
 $$
@@ -76,28 +76,55 @@ Note that both $\mathbf{x}_0$ and $\mathbf{x}_1$ are pseudorandom under the $\te
 Efficient polynomial algorithms can be employed to mitigate the computational limitations described above. Notice that any $n$ dimensional vector has a polynomial representation of degree \(n\), where each vector element serves as a coefficient for each monomial, with the element's index acting as the monomial's exponent. Applying this to the previous approach, we get the following: let the error vectors $(\mathbf{e}_0, \mathbf{e}_1)$ now be degree-$n$ $\tau$-sparse polynomials $(e_0(X), e_1(X))$. The multiplicative shares $(x_0, x_1)$ are derived independently from evaluating the respective error polynomial on position $x$. The additive shares $(z_0, z_1)$ are computed as a secret-shared evaluation of the polynomial product $e_0(X)\cdot e_1(X)$, which are then also evaluated at $x$.
 
 \subsubsection{Construction}
-Doing the above naively would break the security of the PCG since $(x_0, x_1)$ must remain indistinguishable from random. To achieve this, Boyle et al. \cite{boyle2020efficient} proposed an approach that exploits the $\texttt{Ring-LPN}$ assumption by defining $R_p:=\mathbb{Z}_{p}[X]/(F(X))$ to be a ring for a degree-$n$ polynomial $F(X)$. Thus, for a randomly sampled public polynomial $a \in R_p$ and sparse polynomials $e,f\in R_p$, we assume that the pair $(a, a\cdot e+f \texttt{ mod } F(X))$ is indistinguishable under $\texttt{Ring-LPN}$ (cf. Section \ref{prelim:ring_lpn}). From this, we construct the PCG: Given degree-$n$ $\tau$-sparse polynomials $(e_0, e_1)$ and $(f_0, f_1)$ each party $\sigma$ obtains $(e_\sigma, f_\sigma$) as their LPN secret. The parties additively secret share the multiplication of their secrets by utilizing FSS as depicted in Equation \ref{eq:ringLpnSecretMult}.  We stick to vector representation for simplicity (although dealing with polynomials). Notice that polynomial multiplication is equivalent to performing a tensor product of their polynomial vector representation. 
+Doing the above naively would break the security of the PCG since $(x_0, x_1)$ must remain indistinguishable from random. To achieve this, Boyle et al. \cite{boyle2020efficient} proposed an approach that exploits the $\texttt{Ring-LPN}$ assumption by defining $R_p:=\mathbb{Z}_{p}[X]/(F(X))$ to be a ring for a degree-$n$ polynomial $F(X)$. Thus, for a randomly sampled public polynomial $a \in R_p$ and sparse polynomials $e,f\in R_p$, we assume that the pair $(a, a\cdot e+f \texttt{ mod } F(X))$ is indistinguishable under $\texttt{Ring-LPN}$ (cf. Section \ref{prelim:ring_lpn}). From this, we construct the PCG: Given degree-$n$ $\tau$-sparse polynomials $(e_0, e_1)$ and $(f_0, f_1)$ each party $\sigma$ obtains $(e_\sigma, f_\sigma$) as their LPN secret. The parties additively secret share the (element-wise) multiplication of their secrets using FSS as depicted in Equation \ref{eq:ringLpnSecretMult}.
+
 \begin{equation}
-((e_0, f_0) \otimes (e_1, f_1)) = (e_0 \otimes e_1) + (e_0 \otimes f_1) + (f_0 \otimes e_1) + (f_0 \otimes f_1) \overset{\texttt{FSS.Gen}}{\longrightarrow} (k_0, k_1)
+((e_0, f_0) \otimes (e_1, f_1)) = ((e_0 \cdot e_1), (e_0 \cdot f_1), (f_0 \cdot e_1), (f_0 \cdot f_1)) \:\:\:\:\:\:
+\begin{aligned}
+    & (e_0 \cdot e_1) \overset{\texttt{FSS.Gen}}{\longrightarrow} (k^0_0, k^0_1) \\
+    & (e_0 \cdot f_1) \overset{\texttt{FSS.Gen}}{\longrightarrow} (k^1_0, k^1_1) \\
+    & (f_0 \cdot e_1) \overset{\texttt{FSS.Gen}}{\longrightarrow} (k^2_0, k^2_1) \\
+    & (f_0 \cdot f_1) \overset{\texttt{FSS.Gen}}{\longrightarrow} (k^3_0, k^3_1)
+\end{aligned}
 \label{eq:ringLpnSecretMult}
 \end{equation}
+
 Notably, \texttt{FSS.Gen} only needs to be called once by interpreting the addition of all tensored terms as the underlying multi-point function. The parties can then compute their share $\tilde{z}_\sigma =$ \texttt{FSS.FullEval}($\sigma, k_\sigma$). Combining these values additively recovers the product of their LPN secrets (Equation \ref{eq:ringLPNfulleval}).
+
 \begin{equation}
 \begin{aligned}
-\tilde{z}_0 + \tilde{z}_1 = \texttt{FSS.FullEval}(0, k_0) + \texttt{FSS.FullEval}(0, k_1) = ((e_0, f_0) \otimes (e_1, f_1)) 
+\tilde{z}^0_0 + \tilde{z}^0_1 &= \texttt{FSS.FullEval}(0, k^0_0) + \texttt{FSS.FullEval}(1, k^0_1) = (e_0 \cdot e_1) \\
+\tilde{z}^1_0 + \tilde{z}^1_1 &= \texttt{FSS.FullEval}(0, k^1_0) + \texttt{FSS.FullEval}(1, k^1_1) = (e_0 \cdot f_1) \\
+\tilde{z}^2_0 + \tilde{z}^2_1 &= \texttt{FSS.FullEval}(0, k^2_0) + \texttt{FSS.FullEval}(1, k^2_1) = (f_0 \cdot e_1) \\
+\tilde{z}^3_0 + \tilde{z}^3_1 &= \texttt{FSS.FullEval}(0, k^3_0) + \texttt{FSS.FullEval}(1, k^3_1) = (f_0 \cdot f_1)
+\end{aligned}
+\:\:\:\:\:\: 
+\begin{aligned}
+\tilde{\mathbf{z}}_0 &= (\tilde{z}^0_0, \tilde{z}^1_0, \tilde{z}^2_0, \tilde{z}^3_0) \\
+\tilde{\mathbf{z}}_1 &= (\tilde{z}^0_1, \tilde{z}^1_1, \tilde{z}^2_1, \tilde{z}^3_1)
+\end{aligned}
 \label{eq:ringLPNfulleval}
+\end{equation}
+
+\begin{equation}
+\begin{aligned}
+\tilde{\mathbf{z}}_0 \boxplus \tilde{\mathbf{z}}_1 &= ((\tilde{z}^0_0 + \tilde{z}^0_1), (\tilde{z}^1_0 + \tilde{z}^1_1 ), (\tilde{z}^2_0 + \tilde{z}^2_1), (\tilde{z}^3_0 + \tilde{z}^3_1)) \\
+&= ((e_0 \cdot e_1), (e_0 \cdot f_1), (f_0 \cdot e_1), (f_0 \cdot f_1)) \\
+&= ((e_0, f_0) \otimes (e_1, f_1))
 \end{aligned}
 \end{equation}
+
+
 Each party $\sigma$ now holds a multiplicative share of $((e_0, f_0) \otimes (e_1, f_1))$ through their LPN secret $(e_\sigma, f_\sigma$), as well as an additive share of the same operation through  $\tilde{z}_\sigma$. From this, the parties utilize the public LPN parameter $a$ to generate their tuple $(x_\sigma, z_\sigma)$ as shown in Equation \ref{eq:imroved_pcg}.
 \begin{equation}
 \begin{aligned}
-& x_0 = a\otimes e_0 + f_0 \\
-& x_1 = a\otimes e_1 + f_1
+& x_0 = a\cdot e_0 + f_0 \\
+& x_1 = a\cdot e_1 + f_1
 \end{aligned}
 \:\:\:\:\:\:
 \begin{aligned}
-& z_0 = ((1,a)\otimes(1,a)) \otimes \tilde{z}_0 \\
-& z_1 = ((1,a)\otimes(1,a)) \otimes \tilde{z}_1 
+& \mathbf{z}_0 = ((a,1)\otimes(a,1)) \cdot \tilde{\mathbf{z}}_0 \\
+& \mathbf{z}_1 = ((a,1)\otimes(a,1)) \cdot \tilde{\mathbf{z}}_1 
 \end{aligned}
 \label{eq:imroved_pcg}
 \end{equation}
@@ -105,12 +132,13 @@ Each party $\sigma$ now holds a multiplicative share of $((e_0, f_0) \otimes (e_
 These result in a single shared OLE correlation over $R_p$, as tuples $(x_\sigma, z_\sigma)_{\sigma\in\{0,1\}}$ are correlated, such that $x_0\otimes x_1 = z_0 + z_1$ as shown in Equation \ref{eq:RingLPNPCGProof}. Notice also that $x_0$ and $x_1$ are now pseudorandom under the $\texttt{Ring-LPN}$ assumption.
 \begin{equation}
 \begin{aligned}
-x_0 \otimes x_1 &= (a \otimes e_0 + f_0) \otimes (a \otimes e_1 + f_1) \\
-    &= a \otimes e_0  \otimes a \otimes e_1 + a \otimes e_0 \otimes f_1 + f_0 \otimes a \otimes e_1 + f_0 \otimes f_1 \\
-    &= (a \otimes a) \otimes (e_0 \otimes e_1) + a \otimes (e_0 \otimes f_1)  + a \otimes (f_0 \otimes e_1)  + (f_0 \otimes f_1) \\
-    &= (a \otimes a) \otimes (e_0 \otimes e_1) + (1 \otimes a) \otimes (e_0 \otimes f_1)  + (1 \otimes a) \otimes (f_0 \otimes e_1)  + (f_0 \otimes f_1) \\
-    &= ((1,a) \otimes (1,a)) \otimes ((e_0, f_0) \otimes (e_1, f_1)) \\
-    &= z_0 + z_1
+x_0 \otimes x_1 &= (a\cdot e_0 + f_0 ) \otimes (a \cdot e_1 + f_1) \\
+    &= ((a^2 \cdot e_0 \cdot e_1), (a\cdot e_0 \cdot f_1), (a\cdot e_1 \cdot f_0), (f_0 \cdot f_1)) \\
+    &= (a^2, a, a, 1) \cdot ((e_0 \cdot e_1), (e_0 \cdot f_1), (e_1 \cdot f_0), (f_0 \cdot f_1)) \\
+    &= (a^2, a, a, 1) \cdot ((\tilde{z}^0_0 + \tilde{z}^0_1), (\tilde{z}^1_0 + \tilde{z}^1_1 ), (\tilde{z}^2_0 + \tilde{z}^2_1), (\tilde{z}^3_0 + \tilde{z}^3_1)) \\
+    &= ((a,1)\otimes(a,1)) \cdot (\tilde{\mathbf{z}}_0  \boxplus \tilde{\mathbf{z}}_1) \\
+    &= (((a,1)\otimes(a,1)) \cdot \tilde{\mathbf{z}}_0)  \boxplus  (((a,1)\otimes(a,1)) \cdot \tilde{\mathbf{z}}_1) \\
+    &= \mathbf{z}_0 \boxplus \mathbf{z}_1
 \label{eq:RingLPNPCGProof}
 \end{aligned}
 \end{equation}
