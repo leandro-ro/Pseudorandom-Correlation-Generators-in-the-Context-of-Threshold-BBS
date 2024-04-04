@@ -198,7 +198,7 @@ while $\tilde{u}_0$ is sampled uniformly at random. Any distinguisher, given acc
 
 \subsection{Complexity Improvements}
 \label{subsec:VOLEConstruction}
-The \texttt{Ring-LPN} based PCG improves upon the quadratic complexity of the naive \texttt{Primal-LPN} based approach presented Section \ref{sec:naivePCG}. Specifically, the computation of $\texttt{FSS.FullEval}$ is now in $O(n)$ since the domain size is limited to $[0, ..., 2n-1]$. Additionally, polynomial multiplication, which is equivalent to computing the tensor product of two vectors, allows for the utilization of fast multiplication algorithms such as FFT. Hence, when FFT is used, the quadratic cost of a tensor product is reduced to a polynomial multiplication of superlinear complexity in $O(n \log n)$.
+The \texttt{Ring-LPN} based PCG improves upon the quadratic complexity of the naive \texttt{Primal-LPN} based approach presented Section \ref{sec:naivePCG}. Specifically, the computation of $\texttt{FSS.FullEval}$ is now in $O(n)$ since the domain size is limited to $[0, ..., 2n-1]$. Additionally, polynomial multiplication, which is equivalent to computing the tensor product of two vectors, allows for the utilization of fast multiplication algorithms such as FFT. Hence, when FFT is used, the quadratic cost of a tensor product is reduced to a polynomial multiplication of quasilinear complexity in $O(n \log n)$.
 
 \section{Construction}
 \label{sec:construction}
@@ -272,7 +272,7 @@ The computational complexity of this construction depends on the LPN security pa
 \\\\
 The computational complexity of PCG.Gen$_{\texttt{OLE}}$ is in $O(c^2\tau^2)$ as the costliest operation is the generation of the DSPF seeds. For the outer sum of $\boldsymbol{\alpha}$, we require $\tau^2$ additions, and for the tensor product of $\boldsymbol{\beta}$, we require $\tau^2$ multiplications. \texttt{DSPF$^{\tau^2}_{2N}$.Gen} is in $O(\tau^2)$. As this is computed $c^2$ times the overall complexity comes to $O(c^2\tau^2)$. Although we have quadratic complexity here, this is not a bottleneck in practice as $(c,\tau)$ are small.
 \\\\
-The computational complexity of PCG.Eval$_{\texttt{OLE}}$ is in $O(N\log N \cdot c^2)$ for which the computation of $z_\sigma$ represents the main computational burden. Mainly, the use of FFT allows the complexity to stay superlinear for $N$. Using naive multiplication here would result in quadratic complexity for $N$, making the scheme undesirable for expanding large amounts of OLE correlations. The complexity can be derived from
+The computational complexity of PCG.Eval$_{\texttt{OLE}}$ is in $O(N\log N \cdot c^2)$ for which the computation of $z_\sigma$ represents the main computational burden. Mainly, the use of FFT allows the complexity to stay quasilinear for $N$. Using naive multiplication here would result in quadratic complexity for $N$, making the scheme undesirable for expanding large amounts of OLE correlations. The complexity can be derived from
 
 \begin{itemize}
 \item step 3, which is in $O(Nc^2)$, as we call \texttt{DSPF$^{\tau^2}_{2N}$.FullEval} $c^2$ times.
