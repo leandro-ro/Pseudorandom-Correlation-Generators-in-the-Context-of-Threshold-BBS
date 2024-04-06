@@ -1,46 +1,46 @@
 \chapter{PCG for (Vector-)OLE}
 \label{chapter:PCGforVOLE}
-In this chapter, we recall a PCG variant based on the $R^{c}$-LPN$_{\tau}$ assumption (cf. Figure \ref{fig:module-lpn-game}) first proposed by Boyle et al. in \cite{boyle2020efficient}. The PCG supports expansion to (Vector-)OLE correlations, giving it many applications in cryptographic constructions. We begin with a simplified PCG based on the $\texttt{Primal-LPN}$ assumption. We then show how this approach is adapted to achieve an efficient PCG based on $\texttt{Ring-LPN}$. Finally, we recall the concrete PCG construction based on $R^{c}$-LPN$_{\tau}$ for OLE \cite{boyle2020efficient} and show an adaption that realizes VOLE correlations.
+In this chapter, we recall a PCG variant based on the $R^{c}$-LPN$_{\tau}$ assumption (cf. Figure \ref{fig:module-lpn-game}) first proposed by Boyle et al. \cite{boyle2020efficient}, for which we derive practical considerations afterwards. The PCG supports expansion to (Vector-)OLE correlations, giving it many applications in cryptographic constructions. We start with the first naive PCG construction proposed in \cite{boyle2019efficient}, which is based on the $\texttt{Dual-LPN}$ assumption. With this basic construction, although limited in practicality by its inefficiency, we derive the intuition for using LPN to realize a PCG. We then proceed to move this PCG construction to $\texttt{Ring-LPN}$ and show how this step mitigates the bottlenecks from before. Since $\texttt{Ring-LPN}$ itself does not provide enough randomness, we recall the secure PCG construction by Boyle et al. \cite{boyle2020efficient} that utilizes a generalization of $\texttt{Ring-LPN}$ over multiple ring elements (so-called $\texttt{Module-LPN}$ or $R^{c}$-LPN$_{\tau}$) for OLE and show an adaptation that realizes VOLE correlations.
 
 \section{PCG based on Dual-LPN}
 \label{sec:naivePCG}
-We first introduce a naive approach under a simplified setting. This PCG is based on LPN over a Ring $\mathbb{Z}_p$, which is, in fact, equivalent to $\texttt{Primal-LPN}$ \cite{blum1993cryptographic}, but for simplicity we follow the $\texttt{Dual-LPN}$ assumption for this approach. We can do this, as $\texttt{Dual-LPN}$ itself is equivalent to $\texttt{Primal-LPN}$ \cite{couteau2021silver}. Recall that under $\texttt{Dual-LPN}$, we assume that two distributions
+We first introduce a naive approach under a simplified setting. This PCG is based on LPN over a ring $\mathbb{Z}_p$ (notice, this is not $\texttt{Ring-LPN}$), and follows the $\texttt{Dual-LPN}$ assumption. Under $\texttt{Dual-LPN}$ over ring $\mathbb{Z}_p$, we assume that the distribution
 $$
 \left\{ \mathbf{H}, \mathbf{H} \cdot \mathbf{e} \,\middle|\, \mathbf{H} \stackrel{\$}{\leftarrow} \mathbb{Z}_p^{m \times n}, \mathbf{e} \stackrel{\$}{\leftarrow} \left\{ \mathbf{v} \in \mathbb{Z}_p^n \,\middle|\, \|\mathbf{v}\|_0 = \tau \right\} \right\}
 $$
-are computationally indistinguishable if $\mathbf{e}$ is a $\tau$-sparse error vector. The intuition for realizing a PCG for an OLE correlation from this is as follows: both parties share the same $\texttt{Dual-LPN}$ instance, meaning the LPN matrix $\mathbf{H}$ is public. However, each party $\sigma \in\{0,1\}$ holds a unique, secret error vector $\mathbf{e}_\sigma$. This setup results in each party possessing a value $\mathbf{H}\cdot \mathbf{e}_\sigma$ that is inherently related to the other party's value through the shared matrix $\mathbf{H}$. We can leverage this relationship to securely ’combine’ the values in a way that resembles multiplication via tensor products. The parties can utilize a secret-sharing scheme for this, such that they get an additive share of the multiplication without revealing their error vectors, ultimately producing pseudorandom OLE correlations. In the following, this approach is presented more formally.
+is computationally indistinguishable from uniform for $\mathbf{e}$ being a $\tau$-sparse error vector. The intuition for realizing a PCG for an OLE correlation from this is as follows: both parties share the same $\texttt{Dual-LPN}$ instance, meaning the LPN matrix $\mathbf{H}$ is public. However, each party $\sigma \in\{0,1\}$ holds a unique, secret error vector $\mathbf{e}_\sigma$. The parties additively secret share a product of their secret sparse error vectors, so they attain an OLE correlation (cf. Section \ref{prelim:OLE_VOLE}) over them. The parties then use the LPN matrix to (locally) expand their OLE correlation over sparse vectors to OLE correlations over dense vectors. The parties, therefore, exploit the fact that the small true randomness in a sparse error vector $\mathbf{e}$ can be expanded to a dense pseudorandom vector by computing $\mathbf{H}\cdot\mathbf{e}$, although $\mathbf{H}$ being public. In the following, the approach is presented more formally.
 
 \subsubsection{Construction}
-We start with the generation of the PCG seeds. A $\tau$-sparse error vector $\mathbf{e}_\sigma \in \mathbb{Z}_p^n$ is sampled for each party $\sigma\in\{0,1\}$. Then the tensor product $(\mathbf{e}_0 \otimes \mathbf{e}_1)$ is computed, which results in a ($n\times n$)-matrix consisting of $\tau^2$ non-zero elements. The matrix is transformed into vector notation $(e_0, ... e_{n^2-1})$, where each element represents a corresponding coordinate as depicted in Equation \ref{eq:pcgPrimalLpn}. By interpreting this vector as a multi-point function that maps the $\tau^2$ vector indices (of the non-zero elements) onto their respective values, Function Secret Sharing (FSS) (cf. Definition \ref{def:FSS}) can be used for implicitly secret-sharing the result of $(\mathbf{e}_0 \otimes \mathbf{e}_1)$ additively. The keys generated by \texttt{FSS.Gen} and the error vectors $\mathbf{e}_\sigma$ serve as the PCG seed.
+We start with the generation of the PCG seeds. A $\tau$-sparse error vector $\mathbf{e}_\sigma \in \mathbb{Z}_p^n$ is sampled for each party $\sigma\in\{0,1\}$. Then the tensor product $(\mathbf{e}_0 \otimes \mathbf{e}_1)$ is computed, which results in a ($n\times n$)-matrix consisting of $\tau^2$ non-zero elements. The matrix is transformed into vector notation $(e_0, ... e_{n^2-1})$, where each element represents a corresponding coordinate as depicted in Equation \ref{eq:pcgPrimalLpn}. By interpreting this vector as a multi-point function that maps the $\tau^2$ vector indices (of the non-zero elements) onto their respective values, Function Secret Sharing (FSS) (cf. Definition \ref{def:FSS}) can be used for implicitly secret-sharing the result of $(\mathbf{e}_0 \otimes \mathbf{e}_1)$ additively. Using FFS here is appealing, since there exist efficient schemes for multi-point functions \cite{boyle2015function, boyle2016function}. The keys generated by \texttt{FSS.Gen} and the error vectors $\mathbf{e}_\sigma$ serve as the PCG seed.
 \begin{equation}
 \label{eq:pcgPrimalLpn}
 \mathbf{e}_0 \otimes \mathbf{e}_1 = 
 \begin{pmatrix}
-e_{0} & \cdots & e_{n} \\
+\tilde{z}_{0} & \cdots & \tilde{z}_{n} \\
 \vdots & \ddots & \vdots \\
-e_{n^2-n} & \cdots & e_{n^2-1}
+\tilde{z}_{n^2-n} & \cdots & \tilde{z}_{n^2-1}
 \end{pmatrix}
 \overset{\texttt{FSS.Gen}}{\longrightarrow}
 (k_0, k_1), \:\:\:
 \begin{aligned}
-& \mathbf{\tilde{z}}_0 = \texttt{FSS.FullEval}(0, k_0) = (e_{0}^0, \ldots, e_{n^2-1}^0) \\
-& \mathbf{\tilde{z}}_1 = \texttt{FSS.FullEval}(1, k_1) = (e_{0}^1, \ldots, e_{n^2-1}^1)
+& \mathbf{\tilde{z}}_0 = \texttt{FSS.FullEval}(0, k_0) = (\tilde{z}_{0}^0, \ldots, \tilde{z}_{n^2-1}^0) \\
+& \mathbf{\tilde{z}}_1 = \texttt{FSS.FullEval}(1, k_1) = (\tilde{z}_{0}^1, \ldots, \tilde{z}_{n^2-1}^1)
 \end{aligned}
 \end{equation}
 
-By evaluating their respective FSS key $k_\sigma$, each party obtains additive shares $e_x^\sigma$ of matrix/vector element $e_x$, such that $e_x = e_x^0 + e_x^1$ for $ x\in [n^{2}]$. Notice here, that $e_x$ itself is already multiplicative shared through $\mathbf{e}_\sigma$ as it stems from $\mathbf{e}_0 \otimes \mathbf{e}_1$ (Equation \ref{eq:pcgPrimalLPNFssSecretSharing}). For a full reconstruction of $\mathbf{e}_0 \otimes \mathbf{e}_1$, each party must query $\texttt{FSS.Eval}$ $n^2$ times, which we denote in simplified form by $\texttt{FSS.FullEval}$.
+By evaluating their respective FSS key $k_\sigma$, each party obtains additive shares $\tilde{z}_x^\sigma$ of matrix/vector element $e_x$, such that $\tilde{z}_x = \tilde{z}_x^0 + \tilde{z}_x^1$ for $ x\in [n^{2}]$. Notice here, that $\tilde{z}_x$ itself is already multiplicative shared through $\mathbf{e}_\sigma$ as it stems from $\mathbf{e}_0 \otimes \mathbf{e}_1$ (Equation \ref{eq:pcgPrimalLPNFssSecretSharing}). For a full reconstruction of $\mathbf{e}_0 \otimes \mathbf{e}_1$, each party must query $\texttt{FSS.Eval}$ $n^2$ times, which we denote in simplified form by $\texttt{FSS.FullEval}$.
 
 \begin{equation}
 \begin{aligned}
 \label{eq:pcgPrimalLPNFssSecretSharing}
 \mathbf{e}_0 \otimes \mathbf{e}_1 &= \mathbf{\tilde{z}}_0 + \mathbf{\tilde{z}}_1 \\
 &= \texttt{FSS.FullEval}(0, k_0) + \texttt{FSS.FullEval}(1, k_1) \\
-&= (e_{0}^0, \ldots, e_{n^2-1}^0) + (e_{0}^1, \ldots, e_{n^2-1}^1) \\
-&= (e_{0}^0+e_{0}^1, \ldots, e_{n^2-1}^0+e_{n^2-1}^1) \\
-&= (e_0, ... e_{n^2-1})
+&= (\tilde{z}_{0}^0, \ldots, \tilde{z}_{n^2-1}^0) + (\tilde{z}_{0}^1, \ldots, \tilde{z}_{n^2-1}^1) \\
+&= (\tilde{z}_{0}^0+\tilde{z}_{0}^1, \ldots, \tilde{z}_{n^2-1}^0+\tilde{z}_{n^2-1}^1) \\
+&= (\tilde{z}_0, ... \tilde{z}_{n^2-1})
 \end{aligned}
 \end{equation}
-Each party now holds an multiplicative share of $(\mathbf{e}_0 \otimes \mathbf{e}_1)$ through $\mathbf{e}_\sigma$ and an additive share of the same operation through $\mathbf{\tilde{z}}_\sigma$. From this, the parties utilize the relation to the LPN matrix $\mathbf{H}$ to generate pseudorandom OLE correlations. By extending their values under LPN multiplicative share  $\mathbf{x}_\sigma$ and additive share $\mathbf{z}_\sigma$ (Equation \ref{eq:pcg_naive}) are obtained, such that  $\mathbf{x}_0 \otimes\mathbf{x}_1 = \mathbf{z}_0 + \mathbf{z}_1 $ (Equation \ref{eq:pcgNaiveProof}). 
+Each party now holds an multiplicative share of $(\mathbf{e}_0 \otimes \mathbf{e}_1)$ through $\mathbf{e}_\sigma$ and an additive share of the same operation through $\mathbf{\tilde{z}}_\sigma$. From this, the parties utilize the relation to the LPN matrix $\mathbf{H}$ to (locally) expand a dense vector of pseudorandom OLE correlations. By expanding their values under LPN multiplicative share  $\mathbf{x}_\sigma$ and additive share $\mathbf{z}_\sigma$ (Equation \ref{eq:pcg_naive}) are obtained, such that  $\mathbf{x}_0 \otimes\mathbf{x}_1 = \mathbf{z}_0 + \mathbf{z}_1 $ (Equation \ref{eq:pcgNaiveProof}). 
 
 \begin{equation}
 \begin{aligned}
@@ -68,28 +68,27 @@ Notice that, at this point, the parties do not need to interact with each other.
 \end{aligned}
 \end{equation}
 
-
-Note that both $\mathbf{x}_0$ and $\mathbf{x}_1$ are pseudorandom under the $\texttt{Dual-LPN}$ assumption. The construction therefore extends the $\tau$-sparse error vectors $\mathbf{e}_i$ to realize $n$ independent secret shared multiplications of pseudorandom elements as $\mathbf{x}_0\otimes\mathbf{x}_1=\mathbf{z}_0+\mathbf{z}_1$, thus realizing an OLE correlation such that each party $\sigma$ holds the pair $(\mathbf{x}_\sigma, \mathbf{z}_\sigma)$. Although we achieve a PCG for OLE with this construction, the approach remains inefficient: The computation of (1) the multiplication $H\cdot \mathbf{e}_i$, (2) the tensor $(\mathbf{e}_0 \otimes \mathbf{e}_1)$, and (3) $\texttt{FSS.FullEval}$ for evaluating each secret share is of quadratic complexity. Certain FSS schemes allow for more efficient full-domain evaluation (cf. Section \ref{subsec:treebasedDSPFsImpl}). However, the construction is still computationally expensive when $n$ is large, which is to be expected since the number of individual OLEs we extend must be as large as possible to compensate for the setup cost.
+Note that both $\mathbf{x}_0$ and $\mathbf{x}_1$ are pseudorandom under the $\texttt{Dual-LPN}$ assumption. The construction therefore extends the $\tau$-sparse error vectors $\mathbf{e}_i$ to realize $n^2$ independent secret shared multiplications of pseudorandom elements as $\mathbf{x}_0\otimes\mathbf{x}_1=\mathbf{z}_0+\mathbf{z}_1$, thus realizing $n^2$ OLE correlation such that each party $\sigma$ holds the pair $(\mathbf{x}_\sigma, \mathbf{z}_\sigma)$. Although we achieve a PCG for OLE with this construction, the approach remains inefficient: The computation of (1) the multiplication $H\cdot \mathbf{e}_i$, (2) the tensor $(\mathbf{e}_0 \otimes \mathbf{e}_1)$, and (3) $\texttt{FSS.FullEval}$ for evaluating each secret share is of quadratic complexity. Certain FSS schemes allow for more efficient full-domain evaluation (cf. Section \ref{subsec:treebasedDSPFsImpl}). However, the construction is still computationally expensive when $n$ is large, which is to be expected since the number of individual OLEs we extend must be as large as possible to compensate for the setup cost.
 
 \section{PCG based on Ring-LPN}
 \label{subsec:imrpoved_pcg}
-Efficient polynomial algorithms can be employed to mitigate the computational limitations described above. Notice that any $n$ dimensional vector has a polynomial representation of degree \(n\), where each vector element serves as a coefficient for each monomial, with the element's index acting as the monomial's exponent. Applying this to the previous approach, we get the following: let the error vectors $(\mathbf{e}_0, \mathbf{e}_1)$ now be degree-$n$ $\tau$-sparse polynomials $(e_0(X), e_1(X))$. The multiplicative shares $(x_0, x_1)$ are derived independently from evaluating the respective error polynomial on position $x$. The additive shares $(z_0, z_1)$ are computed as a secret-shared evaluation of the polynomial product $e_0(X)\cdot e_1(X)$, which are then also evaluated at $x$.
+Efficient polynomial algorithms can be employed to mitigate the computational limitations described above. Notice that any $n$ dimensional vector has a polynomial representation of degree \(n\), where each vector element serves as a coefficient for each monomial, with the element's index acting as the monomial's exponent. Applying this to the previous approach, we get the following: let the error vectors $(\mathbf{e}_0, \mathbf{e}_1)$ now be degree-$n$ $\tau$-sparse polynomials $(e_0, e_1)$. The multiplicative shares $(x_0, x_1)$ are derived independently from evaluating the respective error polynomial on position $x$. The additive shares $(z_0, z_1)$ are computed as a secret-shared evaluation of the polynomial product $e_0\cdot e_1$, which are then also evaluated at $x$.
 
 \subsubsection{Construction}
-Doing the above naively would break the security of the PCG since $(x_0, x_1)$ must remain indistinguishable from random. To achieve this, Boyle et al. \cite{boyle2020efficient} proposed an approach that exploits the $\texttt{Ring-LPN}$ assumption by defining $R_p:=\mathbb{Z}_{p}[X]/(F(X))$ to be a ring for a degree-$n$ polynomial $F(X)$. Thus, for a randomly sampled public polynomial $a \in R_p$ and sparse polynomials $e,f\in R_p$, we assume that the pair $(a, a\cdot e+f \texttt{ mod } F(X))$ is indistinguishable under $\texttt{Ring-LPN}$ (cf. Section \ref{prelim:ring_lpn}). From this, we construct the PCG: Given degree-$n$ $\tau$-sparse polynomials $(e_0, e_1)$ and $(f_0, f_1)$ each party $\sigma$ obtains $(e_\sigma, f_\sigma$) as their LPN secret. The parties additively secret share the (element-wise) multiplication of their secrets using FSS as depicted in Equation \ref{eq:ringLpnSecretMult}.
+Doing the above naively would break the security of the PCG since $(x_0, x_1)$ must remain indistinguishable from random. To achieve this, Boyle et al. \cite{boyle2020efficient} proposed an approach that exploits the $\texttt{Ring-LPN}$ assumption by letting $R_p:=\mathbb{Z}_{p}[X]/(F(X))$ be a ring for a degree-$n$ polynomial $F(X)$. Thus, for a randomly sampled public polynomial $a \in R_p$ and sparse polynomials $e,f\in R_p$, we assume that the pair $(a, a\cdot e+f \texttt{ mod } F(X))$ is indistinguishable under $\texttt{Ring-LPN}$ (cf. Section \ref{prelim:ring_lpn}). From this, we construct the PCG: Given degree-$n$ $\tau$-sparse polynomials $(e_0, e_1)$ and $(f_0, f_1)$ each party $\sigma$ obtains $(e_\sigma, f_\sigma$) as their LPN secret. The parties additively secret share the element-wise (polynomial) multiplication of their secrets using FSS as depicted in Equation \ref{eq:ringLpnSecretMult}.
 
 \begin{equation}
-((e_0, f_0) \otimes (e_1, f_1)) = ((e_0 \cdot e_1), (e_0 \cdot f_1), (f_0 \cdot e_1), (f_0 \cdot f_1)) \:\:\:\:\:\:
+\begin{bmatrix}{e_0 \\ f_0}\end{bmatrix} \otimes \begin{bmatrix}{e_1 \\ f_1}\end{bmatrix} = \begin{bmatrix}{e_0 \cdot e_1 \\ e_0 \cdot f_1\\ f_0 \cdot e_1\\ f_0 \cdot f_1}\end{bmatrix}, \:\:\:\:\:\: 
 \begin{aligned}
-    & (e_0 \cdot e_1) \overset{\texttt{FSS.Gen}}{\longrightarrow} (k^0_0, k^0_1) \\
-    & (e_0 \cdot f_1) \overset{\texttt{FSS.Gen}}{\longrightarrow} (k^1_0, k^1_1) \\
-    & (f_0 \cdot e_1) \overset{\texttt{FSS.Gen}}{\longrightarrow} (k^2_0, k^2_1) \\
-    & (f_0 \cdot f_1) \overset{\texttt{FSS.Gen}}{\longrightarrow} (k^3_0, k^3_1)
+& (e_0 \cdot e_1) \overset{\texttt{FSS.Gen}}{\longrightarrow} (k^0_0, k^0_1) \\
+& (e_0 \cdot f_1) \overset{\texttt{FSS.Gen}}{\longrightarrow} (k^1_0, k^1_1) \\
+& (f_0 \cdot e_1) \overset{\texttt{FSS.Gen}}{\longrightarrow} (k^2_0, k^2_1) \\
+& (f_0 \cdot f_1) \overset{\texttt{FSS.Gen}}{\longrightarrow} (k^3_0, k^3_1)
 \end{aligned}
 \label{eq:ringLpnSecretMult}
 \end{equation}
 
-Notably, \texttt{FSS.Gen} only needs to be called once by interpreting the addition of all tensored terms as the underlying multi-point function. The parties can then compute their share $\tilde{z}_\sigma =$ \texttt{FSS.FullEval}($\sigma, k_\sigma$). Combining these values additively recovers the product of their LPN secrets (Equation \ref{eq:ringLPNfulleval}).
+Each party $\sigma$ receives their FFS keys $(k^i_\sigma)_{i\in[4]}$ and is then able to compute an additive share $(\tilde{z}^i_\sigma)_{i\in[4]}$ of each multiplication by performing a full domain evaluation $\tilde{z}^i_\sigma =$ \texttt{FSS.FullEval}($\sigma, k^i_\sigma$). Note that the following therefore applies (Equation \ref{eq:ringLPNfulleval}).
 
 \begin{equation}
 \begin{aligned}
@@ -98,54 +97,56 @@ Notably, \texttt{FSS.Gen} only needs to be called once by interpreting the addit
 \tilde{z}^2_0 + \tilde{z}^2_1 &= \texttt{FSS.FullEval}(0, k^2_0) + \texttt{FSS.FullEval}(1, k^2_1) = (f_0 \cdot e_1) \\
 \tilde{z}^3_0 + \tilde{z}^3_1 &= \texttt{FSS.FullEval}(0, k^3_0) + \texttt{FSS.FullEval}(1, k^3_1) = (f_0 \cdot f_1)
 \end{aligned}
-\:\:\:\:\:\: 
-\begin{aligned}
-\tilde{\mathbf{z}}_0 &= (\tilde{z}^0_0, \tilde{z}^1_0, \tilde{z}^2_0, \tilde{z}^3_0) \\
-\tilde{\mathbf{z}}_1 &= (\tilde{z}^0_1, \tilde{z}^1_1, \tilde{z}^2_1, \tilde{z}^3_1)
-\end{aligned}
 \label{eq:ringLPNfulleval}
 \end{equation}
 
+Continuing from here, the parties store $(\tilde{z}^i_\sigma)_{i\in[4]}$ as a $4$-dimensional polynomial vector $\tilde{\mathbf{z}}_\sigma$. Additive combination of $(\tilde{\mathbf{z}}_0, \tilde{\mathbf{z}}_1)$ recovers the element-wise product of the parties LPN secrets (Equation \ref{eq:ringLpnAdditiveSharesWorkOut}).
+
 \begin{equation}
-\begin{aligned}
-\tilde{\mathbf{z}}_0 \boxplus \tilde{\mathbf{z}}_1 &= ((\tilde{z}^0_0 + \tilde{z}^0_1), (\tilde{z}^1_0 + \tilde{z}^1_1 ), (\tilde{z}^2_0 + \tilde{z}^2_1), (\tilde{z}^3_0 + \tilde{z}^3_1)) \\
-&= ((e_0 \cdot e_1), (e_0 \cdot f_1), (f_0 \cdot e_1), (f_0 \cdot f_1)) \\
-&= ((e_0, f_0) \otimes (e_1, f_1))
-\end{aligned}
+\tilde{\mathbf{z}}_0 + \tilde{\mathbf{z}}_1 = \begin{bmatrix}{ \tilde{z}^0_0 + \tilde{z}^0_1 \\ \tilde{z}^1_0 + \tilde{z}^1_1 \\ \tilde{z}^2_0 + \tilde{z}^2_1 \\ \tilde{z}^3_0 + \tilde{z}^3_1}\end{bmatrix}
+= \begin{bmatrix}{ e_0 \cdot e_1 \\ e_0 \cdot f_1 \\ f_0 \cdot e_1 \\ f_0 \cdot f_1 }\end{bmatrix}
+= \begin{bmatrix}{e_0 \\ f_0}\end{bmatrix} \otimes \begin{bmatrix}{e_1 \\ f_1}\end{bmatrix}
+\label{eq:ringLpnAdditiveSharesWorkOut}
 \end{equation}
 
+Each party $\sigma$ now holds a multiplicative share of the element-wise
+multiplication of their secrets through their LPN secret $(e_\sigma, f_\sigma$), as well as an additive share of the same operation through  $\tilde{\mathbf{z}}_\sigma$. From this, the parties utilize the public LPN parameter $a$ to generate their tuple $(x_\sigma, \mathbf{z}_\sigma)$ as shown in Equation \ref{eq:imroved_pcg}.
 
-Each party $\sigma$ now holds a multiplicative share of $((e_0, f_0) \otimes (e_1, f_1))$ through their LPN secret $(e_\sigma, f_\sigma$), as well as an additive share of the same operation through  $\tilde{z}_\sigma$. From this, the parties utilize the public LPN parameter $a$ to generate their tuple $(x_\sigma, z_\sigma)$ as shown in Equation \ref{eq:imroved_pcg}.
 \begin{equation}
-\begin{aligned}
-& x_0 = a\cdot e_0 + f_0 \\
-& x_1 = a\cdot e_1 + f_1
-\end{aligned}
+x_\sigma = a\cdot e_\sigma + f_\sigma,
 \:\:\:\:\:\:
-\begin{aligned}
-& \mathbf{z}_0 = ((a,1)\otimes(a,1)) \cdot \tilde{\mathbf{z}}_0 \\
-& \mathbf{z}_1 = ((a,1)\otimes(a,1)) \cdot \tilde{\mathbf{z}}_1 
-\end{aligned}
+\mathbf{z}_\sigma = \left(\begin{bmatrix} a \\ 1 \end{bmatrix} \otimes \begin{bmatrix} a \\ 1 \end{bmatrix} \right) \cdot \tilde{\mathbf{z}}_\sigma
 \label{eq:imroved_pcg}
 \end{equation}
 
-These result in a single shared OLE correlation over $R_p$, as tuples $(x_\sigma, z_\sigma)_{\sigma\in\{0,1\}}$ are correlated, such that $x_0\otimes x_1 = z_0 + z_1$ as shown in Equation \ref{eq:RingLPNPCGProof}. Notice also that $x_0$ and $x_1$ are now pseudorandom under the $\texttt{Ring-LPN}$ assumption.
+This results in a single shared OLE correlation over $R_p$, as tuples $(x_\sigma, \mathbf{z}_\sigma)_{\sigma\in\{0,1\}}$ are correlated, such that $x_0\otimes x_1 = \mathbf{z}_0 + \mathbf{z}_1$ as shown in Equation \ref{eq:RingLPNPCGProof}. Notice also that $x_0$ and $x_1$ are now pseudorandom under the $\texttt{Ring-LPN}$ assumption.
+
 \begin{equation}
 \begin{aligned}
 x_0 \otimes x_1 &= (a\cdot e_0 + f_0 ) \otimes (a \cdot e_1 + f_1) \\
-    &= ((a^2 \cdot e_0 \cdot e_1), (a\cdot e_0 \cdot f_1), (a\cdot e_1 \cdot f_0), (f_0 \cdot f_1)) \\
-    &= (a^2, a, a, 1) \cdot ((e_0 \cdot e_1), (e_0 \cdot f_1), (e_1 \cdot f_0), (f_0 \cdot f_1)) \\
-    &= (a^2, a, a, 1) \cdot ((\tilde{z}^0_0 + \tilde{z}^0_1), (\tilde{z}^1_0 + \tilde{z}^1_1 ), (\tilde{z}^2_0 + \tilde{z}^2_1), (\tilde{z}^3_0 + \tilde{z}^3_1)) \\
-    &= ((a,1)\otimes(a,1)) \cdot (\tilde{\mathbf{z}}_0  \boxplus \tilde{\mathbf{z}}_1) \\
-    &= (((a,1)\otimes(a,1)) \cdot \tilde{\mathbf{z}}_0)  \boxplus  (((a,1)\otimes(a,1)) \cdot \tilde{\mathbf{z}}_1) \\
-    &= \mathbf{z}_0 \boxplus \mathbf{z}_1
-\label{eq:RingLPNPCGProof}
+    &= \begin{bmatrix} a^2 \cdot e_0 \cdot e_1 \\ a\cdot e_0 \cdot f_1 \\ a\cdot e_1 \cdot f_0 \\ f_0 \cdot f_1 \end{bmatrix} 
+    = \begin{bmatrix}a^2 \\ a \\ a \\ 1\end{bmatrix} \cdot \begin{bmatrix}e_0 \cdot e_1 \\ e_0 \cdot f_1 \\ e_1 \cdot f_0 \\ f_0 \cdot f_1\end{bmatrix}
+    = \begin{bmatrix}a^2 \\ a \\ a \\ 1\end{bmatrix} \cdot \begin{bmatrix}\tilde{z}^0_0 + \tilde{z}^0_1 \\ \tilde{z}^1_0 + \tilde{z}^1_1 \\ \tilde{z}^2_0 + \tilde{z}^2_1 \\ \tilde{z}^3_0 + \tilde{z}^3_1\end{bmatrix} \\
+    &= \left(\begin{bmatrix}a \\ 1\end{bmatrix}\otimes\begin{bmatrix}a \\ 1\end{bmatrix}\right) \cdot \left(\tilde{\mathbf{z}}_0  + \tilde{\mathbf{z}}_1\right)
+    = \left(\left(\begin{bmatrix}a \\ 1\end{bmatrix}\otimes\begin{bmatrix}a \\ 1\end{bmatrix}\right) \cdot \tilde{\mathbf{z}}_0\right)  +  \left(\left(\begin{bmatrix}a \\ 1\end{bmatrix}\otimes\begin{bmatrix}a \\ 1\end{bmatrix}\right) \cdot \tilde{\mathbf{z}}_1\right) \\
+    &= \mathbf{z}_0 + \mathbf{z}_1
 \end{aligned}
+\label{eq:RingLPNPCGProof}
 \end{equation}
+
+\subsection{Compressing the Additive Share}
+Note that Equation \ref{eq:imroved_pcg} includes '$1$' in the tensor product of the public LPN polynomial $a$. The reason for this is that in this notion, $e_0$ and $e_1$ technically serve as the LPN secret, with $f_0$ and $f_1$ being the noise. In practice, the LPN secret and the noise can be combined into a single polynomial, fixing a position of $a$ to $1$. In \texttt{Ring-LPN} this allows $\mathbf{z}_\sigma$ to be expressed as a single polynomial $z_\sigma$ when instead of computing the multiplication with vector $(a^2, a, a, 1)$, we compute the inner product. This idea becomes more clear when looking at the \texttt{Module-LPN} assumption and the $R^{c}$-LPN$_{\tau}$ security game (Figure \ref{fig:module-lpn-game}), which represents a generalization of \texttt{Ring-LPN} (cf. Section \ref{prelim:ring_lpn}). Given $c$ randomly sampled ring elements $\tilde{e}_0, \tilde{e}_1, ... \tilde{e}_{c-1}$ and $\tilde{a}_0, \tilde{a}_1, ...\tilde{a}_{c-1}$ for $\tilde{a}_{c-1}=1$  the challenger computes the inner product $\tilde{u}_1$ as
+
+\begin{equation}
+\label{eq:inner_product_with_a_1}
+\tilde{u}_{1} \leftarrow \sum_{i=0}^{c-1} \tilde{a}_{i} \cdot \tilde{e}_{i} = \sum_{i=0}^{c-2} \tilde{a}_{i} \cdot \tilde{e}_{i} + \tilde{e}_{c-1}
+\end{equation}
+
+while $\tilde{u}_0$ is sampled uniformly at random. Any distinguisher, given access to $\tilde{a}_0, \tilde{a}_1, ..., \tilde{a}_{c-1}$, is considered to win if it can distinguish between $\tilde{u}_0$ and $\tilde{u}_1$ with a non-negligible probability. The challenger wins if the challenger is not able to do so. Through setting $\tilde{a}_{c-1}$ to $1$ we implicitly utilize $\tilde{e}_{c-1}$ as the LPN noise.
 
 \subsection{Splitting the Ring through $F(X)$}
 \label{subseq:realtiontofx}
-To adapt this to a PCG for OLE over $\mathbb{Z}_p$, cipher-packing techniques from fully homomorphic encryption schemes can be used \cite{smart2014fully}. If the prime $p$ and the polynomial $F(X)$ are carefully chosen, it is possible to decompose $F(X)$ into $n$ linear factors modulo $p$ to get an isomorphism between $R_p$ and $n$ elements in $\mathbb{Z}_p$. This implies that any OLE over $R_p$ can be split up into $n$ individual OLEs over $\mathbb{Z}_p$. Specifically, Boyle et al. \cite{boyle2020efficient} analyze different choices for $F(X)$ and find that cyclotomic polynomials (cf. Section \ref{prelim:cyclotomicPolys}) are the most appropriate since they allow for fast multiplication in $R_p$ using Fast Fourier Transform (FFT). In order to compute the isomorphism, $n$ unique roots of unity ($\xi_0, ...,\xi_{n-1}$) are needed, such that for each root $\xi_l$ it holds that $F(\xi_l)=0$. Then, each party $\sigma$ can evaluate its pair of polynomials $(x_\sigma, z_\sigma)$ on $\xi_l$ to get its share of the $l$-th OLE correlation in $\mathbb{Z}_p$.
+To adapt this to a PCG for OLE over $\mathbb{Z}^n_p$, cipher-packing techniques from fully homomorphic encryption schemes can be used \cite{smart2014fully}. If the prime $p$ and the polynomial $F(X)$ are carefully chosen, it is possible to decompose $F(X)$ into $n$ linear factors modulo $p$ to get an isomorphism between $R_p$ and $n$ elements in $\mathbb{Z}_p$. This implies that any OLE over $R_p$ can be split up into $n$ individual OLEs over $\mathbb{Z}_p$. Specifically, Boyle et al. \cite{boyle2020efficient} analyze different choices for $F(X)$ and find that cyclotomic polynomials (cf. Section \ref{prelim:cyclotomicPolys}) are the most appropriate since they allow for fast multiplication in $R_p$ using Fast Fourier Transform (FFT). In order to compute the isomorphism, $n$ unique roots of unity ($\xi_0, ...,\xi_{n-1}$) are needed, such that for each root $\xi_l$ it holds that $F(\xi_l)=0$. Then, each party $\sigma$ can evaluate its pair of polynomials $(x_\sigma, z_\sigma)$ on $\xi_l$ to get its share of the $l$-th OLE correlation in $\mathbb{Z}_p$.
 
 \subsubsection{Choosing a Cyclotomic Polynomial}
 An interesting property of $N$-th cyclotomic polynomials (Equation \ref{eq:prelim_cyclotomic_poly}) is that when $N=\eta$ for $\eta$ being a power of two, they take on the following simplified form:
@@ -157,50 +158,51 @@ An interesting property of $N$-th cyclotomic polynomials (Equation \ref{eq:preli
 
 This subset of cyclotomic polynomials is particularly well-suited for use in the \texttt{Ring-LPN} based PCG approach, as it splits completely into $\eta/2$ linear factors modulo $p$ and is easy to compute for any choice of $\eta$. For the construction described above, we require the ring $R_p$ to split into $n$ linear factors modulo $p$. Therefore, assuming $n$ is a power of 2, $F(X)$ is chosen as $\Phi_\eta(X) = \Phi_{2n}(X) = X^n + 1$.
 
-
 \subsubsection{Computing the Roots of Unity}
-What remains is to calculate the roots of unity for $\Phi_{2n}(X)$ so that for any $\xi_j \in (\xi_0, \ldots, \xi_{n-1})$ it holds that $\Phi_{2n}(\xi_j) = 0$. We achieve this by leveraging the concept of \textit{primitive roots of unity} in $\mathbb{Z}_p$. Recall that a primitive root of unity, $\omega$, in the finite field  $\mathbb{Z}_p$ (where $p$ is prime) satisfies Fermat's Little Theorem:
+What remains is to calculate the roots of unity for $\Phi_{2n}(X)$ so that for any $\xi_j \in (\xi_0, \ldots, \xi_{n-1})$ it holds that $\Phi_{2n}(\xi_j) = 0$. Recall that in a finite field  $\mathbb{Z}_p$ (where $p$ is prime) all elements $\nu \in \mathbb{Z}_p$ satisfy Fermat's Little Theorem:
 
 \begin{equation}
 \label{eq:fermatLT}
-\omega^{p-1} \equiv 1 \pmod{p}
+\nu^{p-1} \equiv 1 \pmod{p}
 \end{equation}
 
-Further, let $s$ be the \textit{smooth order} (the product of distinct prime factors) of $p-1$.  We can then compute the multiplicative group generator, $g$, as:
-
-\begin{equation}
-g \equiv \omega^{\frac{p-1}{s}} \pmod{p}
-\label{eq:multGroupGen}
-\end{equation}
-
-To calculate $n$ roots, $\xi_j \in \mathbb{Z}_p$ (for $j \in [N]$), we use the following equation, requiring $i$ to be odd with $i=2j+1$:
-
-\begin{equation}
-\label{eq:root_main_equasion}
-\xi_j = \left(g^{\frac{s}{2n}}\right)^{i} = \left(g^{\frac{s}{2n}}\right)^{2j+1}
-\end{equation}
-
-\begin{proof}
-We now prove that $\xi_j$ is indeed a root of unity for $\Phi_{2n}(X)$, meaning $\Phi_{2n}(\xi_j)=0$. First, we generalize Fermat's Little Theorem for multiples of $(p-1)$:
-
-\begin{equation}
-\label{eq:fermatGeneralized}
-\omega^{n\cdot(p-1)} = \left(\omega^{(p-1)}\right)^n = \left(1\right)^n \equiv 1 \pmod{p}.
-\end{equation}
-
-The generalization stems from the fact that in a finite field $\mathbb{Z}_p$, every non-zero element has a unique multiplicative inverse, and the only self-inverse elements are $1$ and $-1$. Considering $\omega^{p-1}$ as the self-inverse element equivalent to $1$, it follows that $\omega^{\frac{p-1}{2}}$ must act as a multiplicative inverse to $-1$. This becomes evident when we consider $\omega^{p-1} = \omega^{\frac{p-1}{2}} \cdot \omega^{\frac{p-1}{2}} = 1$ from which we formulate Equation \ref{eq:rootMinusOne}:
+Further, let $\omega$ be the \textit{primitive root of unity} for $\mathbb{Z}_p$. This means that the order of $\omega$ is exactly $(p-1)$ but simultaneously for any positive $k < (p-1)$ we get $\omega^k \neq 1 \pmod{p}$. From this property and the fact that $\omega^{p-1} = \omega^{\frac{p-1}{2}} \cdot \omega^{\frac{p-1}{2}} = 1$ we formulate Equation \ref{eq:rootMinusOne}.
 
 \begin{equation}
 \label{eq:rootMinusOne}
 \omega^{(p-1)/2} \equiv -1 \pmod{p}.
 \end{equation}
 
-By integrating Equations \ref{eq:root_main_equasion}, \ref{eq:fermatGeneralized} and \ref{eq:rootMinusOne}, we demonstrate that $\Phi_{2n}(\xi_j) = (\xi_j)^n + 1 = 0$:
+Further, let $s$ be the \textit{smooth order} (the product of distinct prime factors) of $p-1$. We define the following generator $g$:
+
+
+\begin{equation}
+g \equiv \left(\omega^{\frac{p-1}{s}}\right)^{\frac{s}{2n}}  \pmod{p}
+\label{eq:multGroupGen}
+\end{equation}
+
+Finally, we use generator $g$ to derive $n$ roots, $\xi_j \in \mathbb{Z}_p$ by iterating over $j \in [n]$. Notably, we require $i$ to be odd such that $i=2j+1$.
+
+\begin{equation}
+\label{eq:root_main_equasion}
+\xi_j = g^{i} = g^{2j+1}
+\end{equation}
+
+\begin{proof}
+We now prove that $\xi_j$ (Equation \ref{eq:root_main_equasion}) is indeed a root of unity for $\Phi_{2n}(X)$, meaning $\Phi_{2n}(\xi_j)=0$. We denote the finite field $\mathbb{Z}_p$ for $p$ being prime. Further, let $\omega$ be the primitive root of unity of $\mathbb{Z}_p$ and $s$ be the smooth order of $p-1$. We begin by generalizing Fermat's Little Theorem for multiples of $(p-1)$:
+
+\begin{equation}
+\label{eq:fermatGeneralized}
+\omega^{n\cdot(p-1)} = \left(\omega^{(p-1)}\right)^n = \left(1\right)^n \equiv 1 \pmod{p}.
+\end{equation}
+
+Then, by integrating Equations \ref{eq:rootMinusOne}, \ref{eq:root_main_equasion} and \ref{eq:fermatGeneralized}, we demonstrate that $\Phi_{2n}(\xi_j) = (\xi_j)^n + 1 = 0$:
 
 \begin{equation}
 \begin{aligned}
 \label{eq:rootProof}
-(\xi_j)^n + 1 &= \left(\left(g^{\frac{s}{2n}}\right)^i\right)^n + 1 \\
+\Phi_{2n}(\xi_j) &= (\xi_j)^n + 1 \\
+   &= \left(g^i\right)^n + 1 \\
    &=\omega^{\frac{p-1}{s} \cdot  \frac{s}{2n} \cdot i \cdot n} + 1 \\
    &=\omega^{\frac{p-1}{s} \cdot \frac{s}{2} \cdot i} + 1\\
    &=\omega^{\frac{p-1}{2} \cdot i} + 1\\
@@ -213,32 +215,22 @@ By integrating Equations \ref{eq:root_main_equasion}, \ref{eq:fermatGeneralized}
 This concludes our proof, showing that Equation \ref{eq:root_main_equasion} generates roots of unity for $\Phi_{2n}(X)$ under the finite field $\mathbb{Z}_p$. 
 \end{proof}
 
-\subsection{Element of Unity in $a$}
-Note that Equation \ref{eq:imroved_pcg} includes '$1$' in the tensor product of the public LPN polynomial $a$. The reason for this is that in this notion, $e_0$ and $e_1$ technically serve as the LPN secret with $f_0$ and $f_1$ being the noise. In practice, the LPN secret and the noise can be combined into a single polynomial by fixing a position (or coefficient in the context of \texttt{Ring-LPN}) of $a$ to $1$. This approach becomes more clear when looking at the \texttt{Module-LPN} assumption and the $R^{c}$-LPN$_{\tau}$ security game (Figure \ref{fig:module-lpn-game}) which represents a generalization of \texttt{Ring-LPN}. Given $c$ randomly sampled ring elements $\tilde{e}_0, \tilde{e}_1, ... \tilde{e}_{c-1}$ and $\tilde{a}_0, \tilde{a}_1, ...\tilde{a}_{c-1}$ for $\tilde{a}_{c-1}=1$  the challenger computes the inner product $\tilde{u}_1$ as
-
-\begin{equation}
-\label{eq:inner_product_with_a_1}
-\tilde{u}_{1} \leftarrow \sum_{i=0}^{c-1} \tilde{a}_{i} \cdot \tilde{e}_{i} = \sum_{i=0}^{c-2} \tilde{a}_{i} \cdot \tilde{e}_{i} + \tilde{e}_{c-1}
-\end{equation}
-
-while $\tilde{u}_0$ is sampled uniformly at random. Any distinguisher, given access to $\tilde{a}_0, \tilde{a}_1, ..., \tilde{a}_{c-1}$, is considered to win if it can distinguish between $\tilde{u}_0$ and $\tilde{u}_1$ with a non-negligible probability. The challenger wins, if the challenger is not able to do so. Through setting $\tilde{a}_{c-1}$ to $1$ we implicitly utilize $\tilde{e}_{c-1}$ as the LPN noise.
-
-
 \subsection{Complexity Improvements}
 \label{subsec:VOLEConstruction}
 The \texttt{Ring-LPN} based PCG improves upon the quadratic complexity of the naive \texttt{Primal-LPN} based approach presented Section \ref{sec:naivePCG}. Specifically, the computation of $\texttt{FSS.FullEval}$ is now in $O(n)$ since the domain size is limited to $[0, ..., 2n-1]$. Additionally, polynomial multiplication, which is equivalent to computing the tensor product of two vectors, allows for the utilization of fast multiplication algorithms such as FFT. Hence, when FFT is used, the quadratic cost of a tensor product is reduced to a polynomial multiplication of quasilinear complexity in $O(n \log n)$.
 
 \section{Construction}
 \label{sec:construction}
-In the following, we present a concrete PCG construction by Boyle et al. \cite{boyle2020efficient} that builds on the notion of the \texttt{Ring-LPN} based PCG discussed above. For this construction, the \texttt{Ring-LPN} assumption is generalized to \texttt{Module-LPN}, which we denote with $R^{c}$-LPN$_{\tau}$ as formalized in Figure \ref{fig:module-lpn-game}. 
+In the following, we present the PCG construction by Boyle et al. \cite{boyle2020efficient} that builds on the notion of the \texttt{Ring-LPN} based PCG discussed above. For this construction, the \texttt{Ring-LPN} assumption is generalized to \texttt{Module-LPN}, which we denote more specifically as $R^{c}$-LPN$_{\tau}$ as formalized in Figure \ref{fig:module-lpn-game}. 
+Analogous to how \texttt{Module-LPN} generalizes \texttt{Ring-LPN} for $c \geq 2$ ring elements, the PCG now uses $c$ degree-$N$ $\tau$-sparse polynomials instead of a single sparse degree-$N$ polynomials per party. Moving to \texttt{Module-LPN} makes this the first practical PCG construction since the security of this assumption (and therefore the PCG) only depends on the choice of $(c,\tau)$ (cf. Section \ref{prelim:ring_lpn}) and not on $N$. Therefore the PCG expansion can generate arbitrarily (up to any choice of $N$) many correlations through splitting the resulting ring elements at $N$ roots of unity (cf. Section \ref{subseq:realtiontofx}).
 \\\\
-The main building block of this construction is a Function Secret Sharing (FSS) scheme (cf. Definition \ref{def:FSS}). The FSS primitive must be able to realize secret sharing of the multiplication of degree-$N$ $\tau$-sparse polynomials. The result of such a multiplication is always a polynomial of degree $< 2N$ consisting of $\tau^2$ non-zero coefficients. In vector notation, this results in a $2N$-vector with $\tau^2$ non-zero elements. This vector can be interpreted as a multi-point function such that the positions of the non-zero elements in the vector are mapped to their respective value. Therefore, the function has a domain $[2N]$ mapping onto $\tau^2$ non-zero elements. As it's FSS scheme, this construction chooses distributed sum of point functions (DSPFs) for secret sharing the described multi-point functions. Under the derived parameters the DSPF is denoted as $\texttt{DSPF}^{\tau^2}_{2N}$. A formal definition for DSPFs is provided in Definition \ref{def:dspf}. The concrete PCG construction by Boyle et al. \cite{boyle2020efficient} (although adapted to our notation) is presented in the following:
+The main building block of this construction is a Function Secret Sharing (FSS) scheme (cf. Definition \ref{def:FSS}). The FSS primitive must be able to realize secret sharing of the multiplication of degree-$N$ $\tau$-sparse polynomials. The result of such a multiplication is always a polynomial of degree $2N$ consisting of $\tau^2$ non-zero coefficients. In vector notation, this results in a $2N$-vector with $\tau^2$ non-zero elements. This vector can be interpreted as a multi-point function such that the positions of the non-zero elements in the vector are mapped to their respective value. Therefore, the function has a domain $[2N]$ mapping onto $\tau^2$ non-zero elements. As it's FSS scheme, this construction chooses distributed sum of point functions (DSPFs) for secret sharing the described multi-point functions. Under the derived parameters the DSPF is denoted as $\texttt{DSPF}^{\tau^2}_{2N}$. A formal definition for DSPFs is provided in Definition \ref{def:dspf}. The concrete PCG construction by Boyle et al. \cite{boyle2020efficient} (although adapted to our notation) is presented in the following:
 
 \begin{specialconstruction}{PCG for Oblivious Linear Evaluation (OLE)}
 \label{construction:PCGforOLEImpl}
 \vspace{1em} 
 
-Let $\lambda$ be the security parameter, $(c,\tau)$ the parameters of the $R^c$-LPN$_\tau$ assumption, and $p$ the modulus. We denote $N$ as the domain of the PCG. Let $R_p:=\mathbb{Z}_{p}[X]/(F(X))$ be a ring for a degree-$N$ polynomial $F(X) \in \mathbb{Z}_{p}[X]$ and ($\texttt{DSPF}^{\tau^2}_{2N}$.Gen, $\texttt{DSPF}^{\tau^2}_{2N}$.Eval) be a FSS scheme for multi-point functions that map a domain $[2N]$ onto $\tau^2$ non-zero elements. Further, let $\boldsymbol{a} = (1, a_2, ..., a_c)$ for $a_2, ...,a_c \in R_p$ be a public input.
+Let $\lambda$ be the security parameter, $(c,\tau)$ the parameters of the $R^c$-LPN$_\tau$ assumption, and $p$ a prime. We denote $N$ as the domain of the PCG. Let $R_p:=\mathbb{Z}_{p}[X]/(F(X))$ be a ring for a degree-$N$ polynomial $F(X) \in \mathbb{Z}_{p}[X]$ and ($\texttt{DSPF}^{\tau^2}_{2N}$.Gen, $\texttt{DSPF}^{\tau^2}_{2N}$.Eval) be a FSS scheme for multi-point functions that map a domain $[2N]$ onto $\tau^2$ non-zero elements. Further, let $\boldsymbol{a} = (1, a_2, ..., a_c)$ for $a_2, ...,a_c \in R_p$ be a public input, chosen uniformly at random.
 
 \vspace{1em} 
 
@@ -278,7 +270,7 @@ and compose all $e^i_\sigma$ to a single length-$c$ vector $\boldsymbol{e}_\sigm
 \textbf{Seed Generation.} For each participant $\sigma \in \{0,1\}$ the construction samples $c$ $\tau$-sparse vectors $\boldsymbol{\alpha}_\sigma$ as exponents and $c$ $\tau$-sparse vectors $\boldsymbol{\beta}_\sigma$ as coefficients representing the participant's respective LPN error vectors. Through sampling the coefficients and exponents separately the polynomial multiplication can be directly secret shared as a point function such that the outer sum of the exponents $\boldsymbol{\alpha}_{0}^{i} \boxplus \boldsymbol{\alpha}_{1}^{j}$ represent the \textit{special positions} and the tensor product of the coefficients $\boldsymbol{\beta}_{0}^{i} \otimes \boldsymbol{\beta}_{1}^{j}$ represent the respective \textit{non-zero elements}. Ultimately PCG.Gen$_{\texttt{OLE}}$, outputs seeds including error polynomials $(\{\boldsymbol{\alpha}_\sigma^i, \boldsymbol{\beta}_\sigma^i)\}_{i\in[c]}$ and the secret sharing of their tensors in form of FSS keys $\{K_\sigma^{i,j}\}_{i,j\in[c]}$  for each party. 
 \\\\
 \textbf{Seed Expansion.}
-For expanding the PCG seeds in PCG.Expand$_{\texttt{OLE}}$ every party inputs its PCG seed and parses the components. The exponent and coefficient vectors are recombined to polynomial representation to compose then a length-$c$ vector $\boldsymbol{e}_\sigma$ of those. Further, each party computes its shares of the tensor products by fully evaluating their part of the DSPF. Recall that the party does not learn anything about the other party's error vectors (and, therefore, the shared multiplication) through this evaluation. The result of each full-domain evaluation is a $<2N$ degree polynomial, which is stored as an element of the $c^2$-length vector $\boldsymbol{u}_\sigma$. Analogue to Equation \ref{eq:imroved_pcg}, each party computes their polynomial pair $(x_\sigma , y_\sigma)$ by computing the inner products $x_\sigma = \langle\boldsymbol{a},\boldsymbol{e}_\sigma\rangle$ and $z_\sigma = \langle\boldsymbol{a}\otimes\boldsymbol{a},\boldsymbol{u}_\sigma\rangle$ which results in a single OLE over $R_p$. As described in Section \ref{subsec:imrpoved_pcg} and shown in Equation \ref{eq:inner_product_with_a_1}, the error vectors implicitly include the LPN secret at the first position which is preserved during the calculation of the inner product by fixing an element of the public input $\boldsymbol{a}$ to 1. 
+For expanding the PCG seeds in PCG.Expand$_{\texttt{OLE}}$ every party inputs its PCG seed and parses the components. The exponent and coefficient vectors are recombined to polynomial representation to compose then a length-$c$ vector $\boldsymbol{e}_\sigma$ of those. Further, each party computes its shares of the tensor products by fully evaluating their part of the DSPF. Recall that the party does not learn anything about the other party's error vectors (and, therefore, the shared multiplication) through this evaluation. The result of each full-domain evaluation is a $2N$ degree polynomial, which is stored as an element of the $c^2$-length vector $\boldsymbol{u}_\sigma$. Analogue to Equation \ref{eq:imroved_pcg}, each party computes their polynomial pair $(x_\sigma , y_\sigma)$ by computing the inner products $x_\sigma = \langle\boldsymbol{a},\boldsymbol{e}_\sigma\rangle$ and $z_\sigma = \langle\boldsymbol{a}\otimes\boldsymbol{a},\boldsymbol{u}_\sigma\rangle$ which results in a single OLE over $R_p$. As described in Section \ref{subsec:imrpoved_pcg} and shown in Equation \ref{eq:inner_product_with_a_1}, the error vectors implicitly include the LPN secret at the first position which is preserved during the calculation of the inner product by fixing an element of the public input $\boldsymbol{a}$ to 1. 
 \\\\
 In terms of security, the following theorem is presented, with a proof available in \cite{boyle2020efficient}.
 \begin{theorem}
@@ -288,7 +280,7 @@ Suppose the $R^c$-LPN$_\tau$ assumption holds and \texttt{DSPF} is a secure FSS 
 
 \subsubsection{Splitting the Ring}
 
-Holding the polynomial pairs $(x_\sigma , y_\sigma)$ the parties can then exploit the isomorphism between $R_p$ and $\mathbb{Z}_{p}$ to generate $N$ individual OLE correlations in $\mathbb{Z}_{p}$ as described in Section \ref{subseq:realtiontofx}. The parties evaluating their pair on the same roots of unity of $F(X)$, such that for any root of unity $\xi_i \in \{\xi_0, ...,\xi_{N-1}\}$
+Holding the polynomial pairs $(x_\sigma , y_\sigma)$ the parties can then exploit the isomorphism between $R_p$ and $\mathbb{Z}_{p}$ to generate $N$ individual OLE correlations in $\mathbb{Z}_{p}$ as described in Section \ref{subseq:realtiontofx}. The parties evaluate their pair on the same roots of unity of $F(X)$, such that for any root of unity $\xi_i \in \{\xi_0, ...,\xi_{N-1}\}$
 
 \begin{equation}
 x_0(\xi_i) \cdot x_1(\xi_i) = z_0(\xi_i)+ z_1(\xi_i)
@@ -314,7 +306,7 @@ The computational complexity of PCG.Eval$_{\texttt{OLE}}$ is in $O(N\log N \cdot
 Notice, that using FFT to compute $x_{\sigma}$ is not beneficial for performance. The reason is that $\boldsymbol{e}$ contains $\tau$-sparse polynomials. Therefore, naive multiplication with degree-$N$ polynomials in $\boldsymbol{a}$ requires only $\tau\cdot N$ operations, which is in $O(N)$ instead of $O(N\log N)$ when using FFT for this case. We analyse this effect more thoroughly in Section \ref{subsec:evalOpOnHighDegreePoly}.
 
 \subsection{Adaption to VOLE}
-We present a PCG construction for Vector-OLE (VOLE) correlations in the following. This construction is derived from slightly adapting the PCG for OLE (Construction 1) described above. Recall that VOLE is an special case of OLE for $N$-dimensional vectors ($\mathbf{x}_0$, $\mathbf{z}_0$, $\mathbf{z}_1$) and constant $v$ such that $\mathbf{x}_0\cdot v = \mathbf{z}_0 + \mathbf{z}_1$ holds $i \in [n]$ OLE tuples $\{(\mathbf{x}_0[i], \mathbf{z}_0[i]),(v, \mathbf{z}_1[i])\}$. 
+We present a PCG construction for Vector-OLE (VOLE) correlations in the following. This construction is derived from slightly adapting the PCG for OLE (Construction \ref{construction:PCGforOLEImpl}) described above. Recall that VOLE is an special case of OLE for $N$-dimensional vectors ($\mathbf{x}_0$, $\mathbf{z}_0$, $\mathbf{z}_1$) and constant $v$ such that $\mathbf{x}_0\cdot v = \mathbf{z}_0 + \mathbf{z}_1$ holds $i \in [n]$ OLE tuples $\{(\mathbf{x}_0[i], \mathbf{z}_0[i]),(v, \mathbf{z}_1[i])\}$. 
 \\\\
 The intuition for this PCG is as follows: where we had to secret share the multiplication of two polynomials before, we now need to secret share the multiplication of a polynomial by a constant. As this does not change the degree of the polynomial, the result of the operation under a degree-$N$ $\tau$-sparse polynomial can be represented by a multi-point function of domain $N$ mapping onto $\tau$ non-zero elements. Therefore, we can realize a secret sharing using $\texttt{DSPF}^{\tau}_{N}$. In the following, we formalize the adapted construction.
 
@@ -323,7 +315,7 @@ The intuition for this PCG is as follows: where we had to secret share the multi
 
 \vspace{1em}
 
-Let $\lambda$ be the security parameter, $(c,\tau)$ the parameters of the $R^c$-LPN$_\tau$ assumption, and $p$ the modulus. We denote $N$ as the domain of the PCG. Let $R_p:=\mathbb{Z}_{p}[X]/(F(X))$ be a ring for a degree-$N$ polynomial $F(X) \in \mathbb{Z}_{p}[X]$ and ($\texttt{DSPF}^{\tau}_{N}$.Gen, $\texttt{DSPF}^{\tau}_{N}$.Eval) be a FSS scheme for multi-point functions that map a domain $[N]$ onto $\tau$ non-zero elements. Further, let $\boldsymbol{a} = (1, a_2, ..., a_c)$ for $a_2, ...,a_c \in R_p$ be a public input.
+Let $\lambda$ be the security parameter, $(c,\tau)$ the parameters of the $R^c$-LPN$_\tau$ assumption, and $p$ a prime. We denote $N$ as the domain of the PCG. Let $R_p:=\mathbb{Z}_{p}[X]/(F(X))$ be a ring for a degree-$N$ polynomial $F(X) \in \mathbb{Z}_{p}[X]$ and ($\texttt{DSPF}^{\tau}_{N}$.Gen, $\texttt{DSPF}^{\tau}_{N}$.Eval) be a FSS scheme for multi-point functions that map a domain $[N]$ onto $\tau$ non-zero elements. Further, let $\boldsymbol{a} = (1, a_2, ..., a_c)$ for $a_2, ...,a_c \in R_p$ be a public input, chosen uniformly at random.
 
 \vspace{1em}
 

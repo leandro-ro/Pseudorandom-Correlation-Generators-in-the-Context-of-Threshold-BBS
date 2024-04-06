@@ -1,6 +1,6 @@
 \chapter{Evaluation}
 \label{chapter:evaluation}
-This chapter assesses the performance of our implementation, with initial benchmarks for the core building blocks, followed by benchmarks for the full OLE and VOLE PCG construction. The goal for each building block is to keep the runtime linear with respect to the PCG domain $N$. Recall that $N$ determines the number of individual (V)OLE correlations expandable from a single PCG instantiation. Linear scaling across building blocks is crucial to offset setup costs and reduce the amortized runtime per correlation as more (V)OLEs are generated. We demonstrate that most building blocks successfully achieve linearity through careful optimization. However, the use of FFT for high-degree polynomial multiplication introduces a quasilinear element within the overall PCG construction.
+This chapter assesses the performance of our implementation, with initial benchmarks for the core building blocks, followed by benchmarks for the full OLE and VOLE PCG construction. The optimum for each building block is to keep the runtime linear with respect to the PCG domain $N$. Recall that $N$ determines the number of individual (V)OLE correlations expandable from a single PCG instantiation. Linear scaling across building blocks is crucial to offset setup costs and reduce the amortized runtime per correlation as more (V)OLEs are generated. We demonstrate that most building blocks successfully achieve linearity through careful optimization. However, the use of FFT for high-degree polynomial multiplication introduces a quasilinear element within the overall PCG construction.
 \\\\
 \textbf{Setup.} Our benchmark environment utilizes a Xeon Gold 5120 CPU @ 2.20GHz with 14 cores (multi-threading disabled) and 64GB of RAM. Parallelization is handled using Go routines and a worker pool to optimize thread utilization. All benchmarks are repeated a minimum of 10 times to account for statistical irregularities. Benchmarking is facilitated by the Go built-in testing package. 
 
@@ -9,30 +9,30 @@ We start by examining the individual building blocks and providing insight into 
 
 \subsection{DSPF Full Domain Evaluation}
 \label{subsec:evalDspfFullDomain}
-We evaluate the performance of the DSPF full domain evaluation based on its differential usage in the OLE and VOLE construction. Hence, our benchmarks evaluate \texttt{DSPF.FullEval}$_N^p$ for $p\in\{16,256\}$ and $N\in\{2^{10}, ..., 2^{20}\}$, reflecting the larger DSPF instanciation in the OLE case (\texttt{DSPF.FullEval}$_{2N}^{\tau^2}$) compared to the VOLE case (\texttt{DSPF.FullEval}$_{N}^{\tau}$) for $t=16$. Results are presented in Figure \ref{fig:fullEvalChart}.
+We evaluate the performance of the DSPF full domain evaluation based on its differential usage in the OLE and VOLE construction. Hence, our benchmarks evaluate \texttt{DSPF.FullEval}$_N^l$ for $l\in\{16,256\}$ and $N\in\{2^{10}, ..., 2^{20}\}$, reflecting the larger DSPF instanciation in the OLE case (\texttt{DSPF}$^{\tau^2}_{2N}$\texttt{.FullEval}) compared to the VOLE case (\texttt{DSPF}$^{\tau}_{N}$\texttt{.FullEval}) for $\tau=16$. Results are presented in Figure \ref{fig:fullEvalChart}.
 \\\\
-\textbf{Parameter $p$.} The parameter $p$ mainly influences the runtime of \texttt{DSPF.FullEval}. Choosing $p=\tau^2=256$ increases the runtime by around 16x compared to $p=\tau=16$. This aligns with how DSPFs are constructed in our implementation, as each DSPF consists of $p$ individual DPFs, each requiring its own full domain evaluation, resulting in a linear increase for larger $p$.
+\textbf{Parameter $l$.} The parameter $l$ mainly influences the runtime of \texttt{DSPF.FullEval}. Choosing $l=\tau^2=256$ increases the runtime by around 16x compared to $l=\tau=16$. This aligns with how DSPFs are constructed in our implementation, as each DSPF consists of $l$ individual DPFs, each requiring its own full domain evaluation, resulting in a linear increase for larger $l$.
 \\\\
 \textbf{Parameter $N$.} The domain of the DSPF $N$ also has a significant effect on the runtime. Notice the logarithmic scaling of the x-axis here. The runtime for a full domain evaluation increases linearly for larger $N$, which is in line with the complexity we stated for the optimized approach for full domain evaluations of tree-based DPFs in Section \ref{subseq:constructingTBDSPFs}. This property is favorable for the PCG construction as this building block does not influence the time per generated (V)OLE correlation, that is, it does not penalize choosing large $N$.
 \\\\
-\textbf{Potential bottleneck.} Notice that the runtime, especially for $\tau^2$, can be rather high. For example, approximately 36 minutes for $N=2^{20}$. For appropriate LPN parameters, the PCG construction for OLE requires several instances of \texttt{DSPF.FullEval}$_{2N}^{\tau^2}$. This poses the risk of making this primitive a major bottleneck for the final PCG construction, so optimizations here could significantly affect the final construction runtime.
+\textbf{Potential bottleneck.} Notice that the runtime, especially for $\tau^2$, can be rather high. For example, approximately 36 minutes for $N=2^{20}$. For appropriate LPN parameters, the PCG construction for OLE requires several instances of \texttt{DSPF}$^{\tau^2}_{2N}$\texttt{.FullEval}. This poses the risk of making this primitive a major bottleneck for the final PCG construction, so optimizations here could significantly affect the final construction runtime.
 \\\\
-\textbf{Parallelization.} We achieve substantial performance gains through parallelization. Our implementation utilizes a worker pool with one worker per available thread. We queue individual DPFs within the DSPF for processing by these workers. For $N=2^{20}$, we observe speedups of 3.5x for $p=16$ and 4.6x for $p=256$. The higher speedup for $p=256$ is expected due to a longer overall runtime, reducing the relative overhead of the parallelization setup. This effect also explains why parallelization is less beneficial for smaller values of $N$ (e.g., $N=2^{10}$). Furthermore, the advantage of parallelization with $p=256$ over $p=16$ increases with larger $N$. This stems from the suboptimal thread utilization with $p=16$: from our 14 available threads, 12 are left idle after the initial 14 DPFs are processed. The negative impact becomes more apparent for larger values of $N$, as individual tasks take longer to complete, resulting in the unused threads idling for longer periods. However, this issue is mitigated for $p=256$, since more tasks are in the queue, resulting in more efficient hardware utilization and greater speedup.
+\textbf{Parallelization.} We achieve substantial performance gains through parallelization. Our implementation utilizes a worker pool with one worker per available thread. We queue individual DPFs within the DSPF for processing by these workers. For $N=2^{20}$, we observe speedups of 3.5x for $l=16$ and 4.6x for $l=256$. The higher speedup for $l=256$ is expected due to a longer overall runtime, reducing the relative overhead of the parallelization setup. This effect also explains why parallelization is less beneficial for smaller values of $N$ (e.g., $N=2^{10}$). Furthermore, the advantage of parallelization with $l=256$ over $l=16$ increases with larger $N$. This stems from the suboptimal thread utilization with $l=16$: from our 14 available threads, 12 are left idle after the initial 14 DPFs are processed. The negative impact becomes more apparent for larger values of $N$, as individual tasks take longer to complete, resulting in the unused threads idling for longer periods. However, this issue is mitigated for $l=256$, since more tasks are in the queue, resulting in more efficient hardware utilization and greater speedup.
 
 \begin{figure}[t]
     \hspace{-1em}
     \begin{subfigure}[b]{0.5\textwidth}
         \centering
         \includegraphics[scale=0.49]{images/plots/full_eval_t16.png}
-        \caption{$p = \tau = 16$}
+        \caption{$l = \tau = 16$}
     \end{subfigure}
     \hspace{0em}
     \begin{subfigure}[b]{0.5\textwidth}
         \centering
         \includegraphics[scale=0.49]{images/plots/full_eval_t256.png}
-        \caption{$p =\ tau^2 = 256$}
+        \caption{$l = \tau^2 = 256$}
     \end{subfigure}
-    \caption{Comparison of sequential and parallel processing of \texttt{DSPF.FullEval}$_N^p$ for $t=16$}
+    \caption{Comparison of sequential and parallel processing of (\texttt{DSPF}$^{l}_{N}$\texttt{.FullEval}) for $\tau=16$}
     \label{fig:fullEvalChart}
 \end{figure}
 
@@ -46,7 +46,7 @@ Dense degree $N$ polynomials possess non-zero coefficients for all terms ranging
 \begin{figure}[t]
     \centering
     \includegraphics[scale=0.49]{images/plots/poly_mult.png}
-    \caption{Comparing approaches to polynomial multiplication of two dense degree $N$ polynomials}
+    \caption{Comparing approaches to polynomial multiplication of two dense degree $N$-polynomials}
     \label{fig:polyMultNaiveVsFFT}
 \end{figure}
 
@@ -71,7 +71,7 @@ Sparse polynomials of degree $N$ possess only a few non-zero coefficients within
     \label{fig:naiveVsFFTSparsePolys}
 \end{figure}
 
-\subsubsection{Evaluation}
+\subsubsection{Polynomial Evaluation}
 In Section \ref{subsec:horner}, we outline how Horner's method optimizes polynomial evaluation to achieve linear $O(N)$ complexity, a significant improvement over the naive quadratic approach. To validate this, we present benchmarks for evaluating polynomials of degree $N \in \{2^{11}, ..., 2^{20}\}$ in Figure \ref{fig:polyEvalBench}. As expected, the naive approach shows worse performance, especially as $N$ increases. Horner's method demonstrates a clear linear runtime increase, enabling the evaluation of a degree $N=2^{20}$ polynomial at a specific position in approximately 165ms. However, after PCG expansion, $N$ individual position needs to be evaluated on (multiple) polynomials to extract all (V)OLE correlations. This underscores the importance of polynomial evaluation for the PCG.
 \\\\
 \textbf{Parallelization.} To address a potential bottleneck, we explore parallelization. Unlike parallelizing multiple evaluations, our strategy directly enhances performance for single-point evaluations – potentially beneficial if storage complexity is a concern and parties split the ring on demand (cf. Section \ref{sec:fxconsiderationsImpl}). Our parallelized implementation of Horner's method achieves a near-10x speedup, demonstrating good hardware utilization. This reduces the evaluation time for a degree $N=2^{20}$ polynomial to 17.7ms, down from 165ms.
@@ -104,7 +104,7 @@ In this section, we evaluate the PCG construction presented in Section \ref{subs
 \label{subsec:evalGen}
 Figure \ref{fig:ComparingPCGGeneration} presents the runtime of PCG seed generation, particularly when using a trusted dealer. This contrasts with the higher overhead of distributed generation algorithms, which are not part of this work. It is worth noting that distributed generation alternatives exist, but they introduce significant performance tradeoffs.
 \\\\
-The VOLE construction requires four calls to \texttt{DSPF$^{t}_{N}$.Gen}. With $t=16$, this translates into 64 underlying DPF calculations (cf. Section \ref{subseq:constructingTBDSPFs}). On the contrary, the OLE construction performs 16 calls to \texttt{DSPF$^{\tau^2}_{2N}$.Gen}, demanding a significantly higher 4096 DPF computations. This 64x increase in DPFs aligns well with the benchmark results. For $N=2^{18}$, the OLE runtime of 0.44s is approximately 68 times longer than the VOLE's 0.0064s. Interestingly, the domain size $N$ has a relatively minor impact on generation time. This comes from the tree-based approach used within the underlying DPFs. Doubling $N$ leads to a roughly constant increase in operations (proportional to $\tau$ or $\tau^2$), due to the fixed value of $\tau$. 
+The VOLE construction requires four calls to \texttt{DSPF$^{\tau}_{N}$.Gen}. With $\tau=16$, this translates into 64 underlying DPF calculations (cf. Section \ref{subseq:constructingTBDSPFs}). On the contrary, the OLE construction performs 16 calls to \texttt{DSPF$^{\tau^2}_{2N}$.Gen}, demanding a significantly higher 4096 DPF computations. This 64x increase in DPFs aligns well with the benchmark results. For $N=2^{18}$, the OLE runtime of 0.44s is approximately 68 times longer than the VOLE's 0.0064s. Interestingly, the domain size $N$ has a relatively minor impact on generation time. This comes from the tree-based approach used within the underlying DPFs. Doubling $N$ leads to a roughly constant increase in operations (proportional to $\tau$ or $\tau^2$), due to the fixed value of $\tau$. 
 
 \begin{figure}[t]
     \centering
