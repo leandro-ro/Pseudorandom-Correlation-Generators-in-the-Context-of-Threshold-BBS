@@ -134,7 +134,7 @@ x_0 \otimes x_1 &= (a\cdot e_0 + f_0 ) \otimes (a \cdot e_1 + f_1) \\
 \label{eq:RingLPNPCGProof}
 \end{equation}
 
-\subsection{Compressing the Additive Share}
+\subsection{Compressing the Noise}
 Note that Equation \ref{eq:imroved_pcg} includes '$1$' in the tensor product of the public LPN polynomial $a$. The reason for this is that in this notion, $e_0$ and $e_1$ technically serve as the LPN secret, with $f_0$ and $f_1$ being the noise. In practice, the LPN secret and the noise can be combined into a single polynomial, fixing a position of $a$ to $1$. In \texttt{Ring-LPN}, this allows $\mathbf{z}_\sigma$ to be expressed as a single polynomial $z_\sigma$ when instead of computing the multiplication with vector $(a^2, a, a, 1)$, we compute the inner product. This idea becomes more clear when looking at the \texttt{Module-LPN} assumption and the $R^{c}$-LPN$_{\tau}$ security game (Figure \ref{fig:module-lpn-game}), which represents a generalization of \texttt{Ring-LPN} (cf. Section \ref{prelim:ring_lpn}). Given $c$ randomly sampled ring elements $\tilde{e}_0, \tilde{e}_1, ... \tilde{e}_{c-1}$ and $\tilde{a}_0, \tilde{a}_1, ...\tilde{a}_{c-1}$ for $\tilde{a}_{c-1}=1$  the challenger computes the inner product $\tilde{u}_1$ as
 
 \begin{equation}
