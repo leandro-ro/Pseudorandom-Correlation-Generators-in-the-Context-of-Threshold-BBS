@@ -1,8 +1,8 @@
 \chapter{Evaluation}
 \label{chapter:evaluation}
-This chapter assesses the performance of our implementation, with initial benchmarks for the core building blocks, followed by benchmarks for the full OLE and VOLE PCG construction. The optimum for each building block is to keep the runtime linear for the PCG domain $N$. Recall that $N$ determines the number of individual (V)OLE correlations expandable from a single PCG instantiation. Linear scaling across building blocks is crucial to offset setup costs and reduce the amortized runtime per correlation as more (V)OLEs are generated. We demonstrate that most building blocks successfully achieve linearity through careful optimization. However, using FFT for high-degree polynomial multiplication introduces a quasilinear element within the overall PCG construction.
+This chapter assesses the performance of our implementation, with initial benchmarks for the core building blocks, followed by benchmarks for the full OLE and VOLE PCG construction. The optimum for each building block is to keep the runtime linear for the PCG domain $N$. Recall that $N$ determines the number of individual (V)OLE correlations expandable from a single PCG instantiation. Linear scaling across building blocks is appealing to offset setup costs and reduce the amortized runtime per correlation as more (V)OLEs are generated. We demonstrate that most building blocks successfully achieve linearity through careful optimization. However, using FFT for high-degree polynomial multiplication introduces a quasilinear element within the overall PCG construction.
 \\\\
-\textbf{Setup.} Our benchmark environment utilizes a Xeon Gold 5120 CPU @ 2.20GHz with 14 cores (multi-threading disabled) and 64GB of RAM. Parallelization is handled using Go routines and a worker pool to optimize thread utilization. All benchmarks are repeated ten times to account for statistical irregularities. Benchmarking is facilitated by the Go built-in testing package. 
+\textbf{Setup.} Our benchmark environment utilizes a Xeon Gold 5120 CPU @ 2.20GHz with 14 cores (multi-threading disabled) and 64GB of RAM. Parallelization is handled using \textit{go routines} and a worker pool to optimize thread utilization. All benchmarks are repeated ten times to account for statistical irregularities. Benchmarking is facilitated by the \textit{go} built-in testing package. 
 
 \section{Building Blocks}
 We start by examining the individual building blocks and providing insight into the performance characteristics of each component, allowing us to identify potential bottlenecks and additional areas for optimization for the final PCG construction. Therefore, all test parameters are chosen based on the LPN security parameters $(c,\tau)=(4,16)$ and the domain $N$ used for the final construction. We also benchmark naive implementations for every component to quantify the practical considerations proposed in Chapter \ref{chapter:ImplementingPCGs}.
@@ -67,7 +67,7 @@ Sparse polynomials of degree $N$ possess only a few non-zero coefficients within
         \includegraphics[scale=0.49]{images/plots/poly_mult_sparse_N18.png}
         \caption{$N=2^{18}$}
     \end{subfigure}
-    \caption{Comparing approaches to polynomial multiplication of two sparse degree $N$ polynomials}
+    \caption{Comparing approaches to polynomial multiplication of two sparse degree-$N$ polynomials}
     \label{fig:naiveVsFFTSparsePolys}
 \end{figure}
 
@@ -109,7 +109,7 @@ The VOLE construction requires four calls to \texttt{DSPF$^{\tau}_{N}$.Gen}. Wit
 \begin{figure}[t]
     \centering
     \includegraphics[scale=0.49]{images/plots/pcg_gen.png}
-    \caption{Comparing the PCG expansion OLE and VOLE}
+    \caption{Runtime comparison of the PCG seed generation for OLE and VOLE over $N$}
     \label{fig:ComparingPCGGeneration}
 \end{figure}
 
@@ -143,7 +143,7 @@ We observe a nearly exponential runtime increase in OLE construction for small $
 \end{itemize}
 This disparity, coupled with the higher frequency of polynomial multiplication, provides a clear explanation for the longer runtime and worse scaling of the OLE construction. Although we observe these attributes, we believe that the quasilinear performance of both constructions is practical and present an application in Chapter \ref{chapter:PCGforBBSPlus}.
 \\\\
-\textbf{Profiling:} We suggested that FFT-based polynomial multiplications are the primary runtime bottleneck of the PCG constructions. Although this is indeed the case for large $N$, we found that the (relative) impact of the FFT varies and applies differently to the OLE and VOLE construction. To quantify this behavior, we profile the runtime distribution between the DSPF full domain evaluations (step 3) and generating ring elements via FFT (step 4/5) of Construction \ref{construction:PCGforOLEImpl} and \ref{construction:PCGforVOLEImpl} in Figure \ref{fig:runtimeAllocationComparision}. We observe that for the OLE construction, the quasilinearity of the FFT becomes dominant only for larger $N$. This is also due to the fact that the runtime required for the (large) DSPF full domain evaluations is quite high to begin with, which is less the case for the smaller DSPF domains in the VOLE case, as described before. Simultaneously, this is the reason why the FFT is more dominant for smaller $N$ in the VOLE construction. Recall from Section \ref{subsec:evalDspfFullDomain} that the advantage of parallelizing the full domain evaluation for the OLE case increases with larger $N$ compared to the VOLE case. We recognize this effect here, as the increase in the dominance of the FFT increases steadily for OLE but flattens out for VOLE. Ultimately, the quasilinear nature of the FFT implies that its relative share of the runtime will approach 100\% in both constructions if $N$ is large enough.
+\textbf{Profiling:} We suggested that FFT-based polynomial multiplications are the primary runtime bottleneck of the PCG constructions. Although this is indeed the case for large $N$, we found that the (relative) impact of the FFT varies and applies differently to the OLE and VOLE construction. To quantify this behavior, we profile the runtime distribution between the DSPF full domain evaluations (step 3) and generating ring elements via FFT (step 4/5) of Construction \ref{construction:PCGforOLEImpl} and \ref{construction:PCGforVOLEImpl} in Figure \ref{fig:runtimeAllocationComparision}. We observe that for the OLE construction, the quasilinearity of the FFT becomes dominant only for larger $N$. This is also due to the fact that the runtime required for the (large) DSPF full domain evaluations is quite high to begin with, which is less the case for the smaller DSPF domains in the VOLE case, as described before. Simultaneously, this is the reason why the FFT is more dominant for smaller $N$ in the VOLE construction. Recall from Section \ref{subsec:evalDspfFullDomain} that the advantage of parallelizing the full domain evaluation for the OLE case increases with larger $N$ compared to the VOLE case. We recognize this effect here, as the increase in the dominance of the FFT increases steadily for OLE but flattens out for VOLE. Ultimately, the quasilinear nature of the FFT implies that its relative share of the runtime approaches 100\% in both constructions if $N$ is large enough.
 
 \begin{figure}[t]
     %\centering
